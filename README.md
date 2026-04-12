@@ -38,7 +38,7 @@ Calculadora interactiva para estimar el **sueldo neto mensual y anual** a partir
 
 ## 📁 Estructura del proyecto
 
-\`\`\`text
+```text
 calculadora-salario/
 ├── index.html          # Estructura principal
 ├── css/
@@ -46,7 +46,7 @@ calculadora-salario/
 ├── js/
 │   └── script.js       # Lógica y cálculos
 └── README.md           # Documentación
-\`\`\`
+```
 
 ## 🧮 Uso
 
@@ -64,11 +64,11 @@ calculadora-salario/
 
 ## 🔧 Instalación local
 
-\`\`\`bash
+```bash
 git clone https://github.com/AndyOPDev/calculadora-salario.git
 cd calculadora-salario
 # Abre index.html en tu navegador
-\`\`\`
+```
 
 ## 📄 Licencia
 
