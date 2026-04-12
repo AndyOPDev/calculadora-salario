@@ -1,4 +1,4 @@
-# Calculadora de Sueldo Neto · España 2025
+# Calculadora de Sueldo Neto · España 2026
 
 Calculadora interactiva para estimar el **sueldo neto mensual y anual** a partir del salario bruto, aplicando la normativa IRPF 2025 (estatal + Murcia) y cotizaciones a la Seguridad Social.
 
@@ -28,6 +28,12 @@ Calculadora interactiva para estimar el **sueldo neto mensual y anual** a partir
 | Reducción rendimientos | hasta 6.498 € |
 | Escala estatal IRPF | 9,5% – 24,5% |
 | Escala Murcia IRPF | 9,5% – 25,0% |
+
+## 🗺️ Nota sobre comunidades autónomas
+
+> **⚠️ Importante:** Esta calculadora utiliza los tramos autonómicos de la **Región de Murcia (2025)** . Para el resto de España, los resultados son **orientativos** ya que cada comunidad tiene ligeras variaciones en su escala autonómica.
+
+**Mejora planificada:** En futuras versiones se añadirá un selector para elegir cualquier comunidad autónoma.
 
 ## 🛠️ Tecnologías
 
