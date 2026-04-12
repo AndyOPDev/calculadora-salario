@@ -367,8 +367,9 @@ header h1 {
   margin-right: -0.2rem;
 }
 
-/* Para Firefox */
+/* Para Firefox - versión corregida */
 .field-wrap input[type="number"] {
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 
