@@ -1,0 +1,41 @@
+# Entornos virtuales de Python
+venv/
+env/
+.venv/
+.env/
+ENV/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Editores y IDEs
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*.db
+
+# Archivos de log y temporales
+*.log
+*.tmp
+*.bak
+*.backup
+
+# Variables de entorno
+.env.local
+
+# Dependencias de Node
+node_modules/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+EOF

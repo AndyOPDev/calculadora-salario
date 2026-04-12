@@ -159,6 +159,8 @@ header h1 {
 .metric {
   background: var(--bg); border: 1px solid var(--border);
   border-radius: 4px; padding: 1.1rem 1.2rem;
+  text-align: center;
+  position: relative;
 }
 
 .metric.highlight  { border-color: var(--accent);  background: #1a1c0f; }
@@ -176,6 +178,18 @@ header h1 {
   letter-spacing: 0.15em; color: var(--muted);
   text-transform: uppercase; margin-bottom: 0.5rem;
 }
+/* Evitar que los tooltips hereden mayusculas */
+[tooltip-data]::after {
+  text-transform: none !important;
+}
+
+.metric-label[tooltip-data] {
+  text-transform: uppercase;
+}
+
+.metric-label[tooltip-data]::after {
+  text-transform: none;
+}
 
 .metric-value {
   font-family: var(--mono); font-size: 1.75rem;
@@ -188,6 +202,59 @@ header h1 {
 .metric-sub {
   font-family: var(--mono); font-size: 0.65rem;
   color: var(--muted); margin-top: 0.4rem;
+}
+
+/* Tooltips sin simbolo - al pasar sobre cualquier texto */
+[tooltip-data] {
+  position: relative;
+  cursor: help;
+}
+
+[tooltip-data]:hover::after {
+  content: attr(tooltip-data);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  white-space: normal;
+  width: 260px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+[tooltip-data]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 115%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--accent) transparent transparent transparent;
+  z-index: 100;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  [tooltip-data]:hover::after {
+    width: 200px;
+    font-size: 0.65rem;
+  }
+}
+
+/* Tooltip para elementos en filas */
+.brow[tooltip-data] {
+  cursor: help;
 }
 
 /* Breakdown */
@@ -218,17 +285,14 @@ header h1 {
 
 .tramo-item { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem; }
 
-.tramo-info {
-  width: 180px; flex-shrink: 0;
-  font-family: var(--mono); color: var(--text2); font-size: 0.7rem;
-}
+.tramo-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+.tramo-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; cursor: pointer; }
 
-.tramo-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.tramo-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-
-.tramo-tax {
-  width: 70px; text-align: right;
-  font-family: var(--mono); font-size: 0.7rem; color: var(--text); flex-shrink: 0;
+.donut-segment:hover {
+  stroke-width: 26px !important;
+  filter: brightness(1.1);
+  transition: stroke-width 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
 }
 
 /* Chart */
@@ -267,4 +331,54 @@ header h1 {
 
 .legend-pct {
   font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-left: 0.4rem;
+}
+
+/* Tooltip para graficos */
+.chart-tooltip {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.chart-tooltip.visible {
+  opacity: 1;
+}
+
+/* Arreglar solapamiento en inputs number */
+.field-wrap input[type="number"] {
+  padding-right: 1.2rem;
+}
+
+/* Ocultar los botones de incremento/decremento en algunos navegadores */
+.field-wrap input[type="number"]::-webkit-inner-spin-button,
+.field-wrap input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.5;
+  margin-right: -0.2rem;
+}
+
+/* Para Firefox */
+.field-wrap input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.unit {
+  position: absolute;
+  right: 0.5rem;
+  background: var(--bg);
+  padding-left: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+  pointer-events: none;
 }
