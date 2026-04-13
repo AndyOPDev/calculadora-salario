@@ -98,11 +98,11 @@ function onComunidadChange() {
 
 const tooltipsText = {
   brutoAnual: 'Salario bruto anual antes de impuestos. Incluye todas las pagas extraordinarias, bonus fijos y conceptos salariales.',
-  extraMes: 'Plus por disponibilidad, guardias locales, atencion continuada, bonus, etc. Se paga mensualmente y tributa como salario normal.',
-  ayudaMes: 'Ayuda para luz, agua, internet, transporte, dietas. Esta exenta de IRPF segun convenio.',
+  extraMes: 'Plus por disponibilidad, guardias, bonus extras. Se paga mensualmente y tributa como salario normal.',
+  ayudaMes: 'Ayuda para luz, agua, internet, transporte o dietas. Esta exenta de IRPF segun convenio.',
   retencionEmpresa: 'Porcentaje de IRPF que aparece en tu nomina como "Retencion a cuenta del IRPF". Si es mayor que tu tipo efectivo, Hacienda te devolvera la diferencia.',
   dBruto: 'Salario base anual acordado en tu contrato, sin incluir pluses ni complementos.',
-  dExtra: 'Suma anual del plus de guardias o bonus (multiplicado por 12 meses).',
+  dExtra: 'Suma anual del plus de guardias o bonus extras (multiplicado por 12 meses).',
   dBrutoTotal: 'Base total sobre la que se calculan las cotizaciones a la Seguridad Social y el IRPF.',
   dSS: 'Cotizacion del trabajador a la Seguridad Social: contingencias comunes (4,70%), desempleo (1,55%), formacion profesional (0,10%) y MEI (0,13%). Total 6,48%.',
   dRNT: 'Rendimiento neto del trabajo = bruto total - cotizaciones SS.',
@@ -111,7 +111,7 @@ const tooltipsText = {
   dBI: 'Base imponible = base liquidable - minimo personal (5.550 euros). Sobre esta base se aplican los tramos IRPF.',
   dCuotaTotal: 'Suma de cuota estatal + autonómica. Es lo que pagas de IRPF al año.',
   dTipoEfectivo: 'Porcentaje real de IRPF que pagas sobre tu salario bruto total. No es el tipo marginal.',
-  dAyuda: 'Ayuda exenta de suministros o comunicaciones. No tributa ni cotiza.',
+  dAyuda: 'Ayuda exenta de suministros o dietas. No tributa ni cotiza.',
   dNetoAnual: 'Cantidad neta que recibes al año despues de impuestos y seguridad social, mas ayudas exentas.',
   netoMesLabel: 'Cantidad que ingresara en tu cuenta bancaria por cada paga (mensual o extra), despues de impuestos y cotizaciones.',
   netoExtraLabel: 'Cantidad neta por paga cuando incluyes el plus de guardias o disponibilidad.',
@@ -124,11 +124,15 @@ const tooltipsText = {
 };
 
 // ============================================================
-// TOOLTIPS OPTIMIZADOS PARA MÓVIL - SIN DELAY
+// TOOLTIPS OPTIMIZADOS - VERSIÓN FINAL
 // ============================================================
 
 let chartTooltip = null;
 let activeTooltipElement = null;
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let pendingTooltip = null;
 
 function createChartTooltip() {
   if (!chartTooltip) {
@@ -146,76 +150,55 @@ function hideChartTooltip() {
     chartTooltip.style.top = '-9999px';
   }
   activeTooltipElement = null;
+  pendingTooltip = null;
 }
 
 function showChartTooltip(event, text, isTap = false) {
-  // Si es el mismo elemento y ya está visible, no hacer nada
-  if (isTap && activeTooltipElement === event.currentTarget && chartTooltip?.classList.contains('visible')) {
-    return;
-  }
-  
+  // Ocultar tooltip anterior SIEMPRE primero
   hideChartTooltip();
   
   const tooltip = createChartTooltip();
-  // Limpiar el texto y convertirlo a HTML con saltos de línea
-  let formattedText = text
-    .replace(/\n/g, '<br>')
-    .replace(/([\.\!])\s/g, '$1<br>'); // Añadir saltos después de puntos
-  
+  let formattedText = text.replace(/\n/g, '<br>');
   tooltip.innerHTML = formattedText;
   
-  // Obtener coordenadas del toque/ratón
   let clientX, clientY;
-  if (event.touches) {
+  if (event?.touches) {
     clientX = event.touches[0].clientX;
     clientY = event.touches[0].clientY;
-  } else {
+  } else if (event?.clientX) {
     clientX = event.clientX;
     clientY = event.clientY;
+  } else {
+    clientX = window.innerWidth / 2;
+    clientY = window.innerHeight / 2;
   }
   
   tooltip.classList.add('visible');
   
-  // Posicionar después de que el tooltip tenga dimensiones
-  setTimeout(() => {
+  // Usar requestAnimationFrame para mejor rendimiento
+  requestAnimationFrame(() => {
     const tooltipRect = tooltip.getBoundingClientRect();
     let x, y;
     
-    // Posicionar arriba o abajo según espacio disponible
     if (clientY - tooltipRect.height - 20 > 0) {
-      // Arriba
       y = clientY - tooltipRect.height - 15;
     } else {
-      // Abajo
       y = clientY + 25;
     }
     
-    // Centrar horizontalmente, pero sin salirse de la pantalla
     x = clientX - (tooltipRect.width / 2);
-    
-    // Ajustar si se sale por la izquierda
-    if (x < 10) {
-      x = 10;
-    }
-    
-    // Ajustar si se sale por la derecha
+    if (x < 10) x = 10;
     if (x + tooltipRect.width > window.innerWidth - 10) {
       x = window.innerWidth - tooltipRect.width - 10;
     }
     
     tooltip.style.left = x + 'px';
     tooltip.style.top = y + 'px';
-  }, 10);
+  });
   
   if (isTap) {
-    activeTooltipElement = event.currentTarget;
+    activeTooltipElement = event?.currentTarget;
   }
-}
-
-function onTooltipTap(event, text) {
-  event.preventDefault();
-  event.stopPropagation();
-  showChartTooltip(event, text, true);
 }
 
 function onTooltipMouseEnter(event, text) {
@@ -228,17 +211,52 @@ function onTooltipMouseLeave() {
   }
 }
 
-// Eliminar delay al hacer scroll - ocultar inmediatamente
-function onScrollOrTouchMove() {
-  if (chartTooltip && chartTooltip.classList.contains('visible')) {
-    hideChartTooltip();
-  }
+function onTooltipTouchStart(event, text) {
+  touchStartX = event.touches[0].clientX;
+  touchStartY = event.touches[0].clientY;
+  touchStartTime = Date.now();
+  pendingTooltip = { event, text, element: event.currentTarget };
 }
 
-// También ocultar al tocar cualquier parte de la pantalla (fuera de elementos con tooltip)
-document.addEventListener('touchstart', function(e) {
-  // Verificar si el toque fue en un elemento que tiene tooltip
-  let target = e.target;
+function onTooltipTouchEnd(event) {
+  if (!pendingTooltip) return;
+  
+  const touchEnd = event.changedTouches[0];
+  const deltaX = Math.abs(touchEnd.clientX - touchStartX);
+  const deltaY = Math.abs(touchEnd.clientY - touchStartY);
+  const deltaTime = Date.now() - touchStartTime;
+  
+  if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
+    event.preventDefault();
+    event.stopPropagation();
+    showChartTooltip(pendingTooltip.event, pendingTooltip.text, true);
+  }
+  
+  pendingTooltip = null;
+}
+
+function onTooltipTouchCancel() {
+  pendingTooltip = null;
+}
+
+// Scroll: ocultar tooltip inmediatamente (sin warnings)
+let rafId = null;
+function onScroll() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+  }
+  rafId = requestAnimationFrame(() => {
+    hideChartTooltip();
+    rafId = null;
+  });
+}
+
+// Click/tap fuera: ocultar tooltip
+function onDocumentClick(event) {
+  // Si no hay tooltip visible, salir
+  if (!chartTooltip || !chartTooltip.classList.contains('visible')) return;
+  
+  let target = event.target;
   let isTooltipElement = false;
   
   while (target && target !== document.body) {
@@ -246,25 +264,19 @@ document.addEventListener('touchstart', function(e) {
       isTooltipElement = true;
       break;
     }
-    if (target.classList && target.classList.contains('donut-segment')) {
-      isTooltipElement = true;
-      break;
-    }
-    if (target.classList && target.classList.contains('legend-item')) {
-      isTooltipElement = true;
-      break;
-    }
-    if (target.classList && target.classList.contains('tooltip-tramo')) {
+    if (target.classList && (target.classList.contains('donut-segment') || 
+        target.classList.contains('legend-item') || 
+        target.classList.contains('tooltip-tramo'))) {
       isTooltipElement = true;
       break;
     }
     target = target.parentElement;
   }
   
-  if (!isTooltipElement && chartTooltip && chartTooltip.classList.contains('visible')) {
+  if (!isTooltipElement) {
     hideChartTooltip();
   }
-});
+}
 
 // ============================================================
 // DONUT CHART INTERACTIVO
@@ -284,16 +296,15 @@ function drawDonutInteractive(segments) {
     const pct = seg.val / total;
     const dash = pct * circ;
     const gap = circ - dash;
-// Dentro de drawDonutInteractive, reemplaza la construcción del tooltipText:
-let tooltipText = '';
-if (seg.label === 'Neto') {
-  tooltipText = 'NETO\nEl dinero que llega a tu bolsillo\n\n';
-} else if (seg.label === 'IRPF') {
-  tooltipText = 'IRPF\nImpuesto sobre la renta\nSanidad · Educación · Infraestructuras · Defensa · Pensiones\n\n';
-} else {
-  tooltipText = 'SEGURIDAD SOCIAL\nPensiones · Desempleo · Bajas laborales · Formación\n\n';
-}
-tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
+    let tooltipText = '';
+    if (seg.label === 'Neto') {
+      tooltipText = 'NETO\nEl dinero que llega a tu bolsillo\n\n';
+    } else if (seg.label === 'IRPF') {
+      tooltipText = 'IRPF\nImpuesto sobre la renta\nSanidad · Educacion · Infraestructuras · Defensa · Pensiones\n\n';
+    } else {
+      tooltipText = 'SEGURIDAD SOCIAL\nPensiones · Desempleo · Bajas laborales · Formacion\n\n';
+    }
+    tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
     
     html += `<circle
       cx="${cx}" cy="${cy}" r="${r}"
@@ -321,7 +332,9 @@ tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
       el.setAttribute('data-tooltip-attached', 'true');
       el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
       el.addEventListener('mouseleave', onTooltipMouseLeave);
-      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
+      el.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tt));
+      el.addEventListener('touchend', onTooltipTouchEnd);
+      el.addEventListener('touchcancel', onTooltipTouchCancel);
     }
   });
 }
@@ -351,7 +364,9 @@ function buildLegend(segments, total) {
       el.setAttribute('data-tooltip-attached', 'true');
       el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
       el.addEventListener('mouseleave', onTooltipMouseLeave);
-      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
+      el.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tt));
+      el.addEventListener('touchend', onTooltipTouchEnd);
+      el.addEventListener('touchcancel', onTooltipTouchCancel);
     }
   });
 }
@@ -371,7 +386,9 @@ function initTooltips() {
         label.setAttribute('data-tooltip-attached', 'true');
         label.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText[id]));
         label.addEventListener('mouseleave', onTooltipMouseLeave);
-        label.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText[id]));
+        label.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText[id]));
+        label.addEventListener('touchend', onTooltipTouchEnd);
+        label.addEventListener('touchcancel', onTooltipTouchCancel);
         label.style.cursor = 'help';
       }
     }
@@ -387,7 +404,9 @@ function initTooltips() {
         browDiv.setAttribute('data-tooltip-attached', 'true');
         browDiv.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText[id]));
         browDiv.addEventListener('mouseleave', onTooltipMouseLeave);
-        browDiv.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText[id]));
+        browDiv.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText[id]));
+        browDiv.addEventListener('touchend', onTooltipTouchEnd);
+        browDiv.addEventListener('touchcancel', onTooltipTouchCancel);
         browDiv.style.cursor = 'help';
       }
     }
@@ -399,7 +418,9 @@ function initTooltips() {
     netoMesLabel.setAttribute('data-tooltip-attached', 'true');
     netoMesLabel.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.netoMesLabel));
     netoMesLabel.addEventListener('mouseleave', onTooltipMouseLeave);
-    netoMesLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoMesLabel));
+    netoMesLabel.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.netoMesLabel));
+    netoMesLabel.addEventListener('touchend', onTooltipTouchEnd);
+    netoMesLabel.addEventListener('touchcancel', onTooltipTouchCancel);
     netoMesLabel.style.cursor = 'help';
   }
   
@@ -412,7 +433,9 @@ function initTooltips() {
       parentLabel.setAttribute('data-tooltip-attached', 'true');
       parentLabel.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.tipoMarginal));
       parentLabel.addEventListener('mouseleave', onTooltipMouseLeave);
-      parentLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.tipoMarginal));
+      parentLabel.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.tipoMarginal));
+      parentLabel.addEventListener('touchend', onTooltipTouchEnd);
+      parentLabel.addEventListener('touchcancel', onTooltipTouchCancel);
       parentLabel.style.cursor = 'help';
     }
   }
@@ -425,7 +448,9 @@ function initTooltips() {
       parentLabel.setAttribute('data-tooltip-attached', 'true');
       parentLabel.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.tipoEfectivo));
       parentLabel.addEventListener('mouseleave', onTooltipMouseLeave);
-      parentLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.tipoEfectivo));
+      parentLabel.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.tipoEfectivo));
+      parentLabel.addEventListener('touchend', onTooltipTouchEnd);
+      parentLabel.addEventListener('touchcancel', onTooltipTouchCancel);
       parentLabel.style.cursor = 'help';
     }
   }
@@ -436,7 +461,9 @@ function initTooltips() {
     netoMes.setAttribute('data-tooltip-attached', 'true');
     netoMes.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.netoValue));
     netoMes.addEventListener('mouseleave', onTooltipMouseLeave);
-    netoMes.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoValue));
+    netoMes.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.netoValue));
+    netoMes.addEventListener('touchend', onTooltipTouchEnd);
+    netoMes.addEventListener('touchcancel', onTooltipTouchCancel);
     netoMes.style.cursor = 'help';
   }
   
@@ -445,7 +472,9 @@ function initTooltips() {
     dNetoAnual.setAttribute('data-tooltip-attached', 'true');
     dNetoAnual.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.netoAnualValue));
     dNetoAnual.addEventListener('mouseleave', onTooltipMouseLeave);
-    dNetoAnual.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoAnualValue));
+    dNetoAnual.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.netoAnualValue));
+    dNetoAnual.addEventListener('touchend', onTooltipTouchEnd);
+    dNetoAnual.addEventListener('touchcancel', onTooltipTouchCancel);
     dNetoAnual.style.cursor = 'help';
   }
   
@@ -454,7 +483,9 @@ function initTooltips() {
     dCuotaTotal.setAttribute('data-tooltip-attached', 'true');
     dCuotaTotal.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.cuotaTotalValue));
     dCuotaTotal.addEventListener('mouseleave', onTooltipMouseLeave);
-    dCuotaTotal.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.cuotaTotalValue));
+    dCuotaTotal.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.cuotaTotalValue));
+    dCuotaTotal.addEventListener('touchend', onTooltipTouchEnd);
+    dCuotaTotal.addEventListener('touchcancel', onTooltipTouchCancel);
     dCuotaTotal.style.cursor = 'help';
   }
   
@@ -463,7 +494,9 @@ function initTooltips() {
     dSS.setAttribute('data-tooltip-attached', 'true');
     dSS.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.ssValue));
     dSS.addEventListener('mouseleave', onTooltipMouseLeave);
-    dSS.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.ssValue));
+    dSS.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tooltipsText.ssValue));
+    dSS.addEventListener('touchend', onTooltipTouchEnd);
+    dSS.addEventListener('touchcancel', onTooltipTouchCancel);
     dSS.style.cursor = 'help';
   }
 }
@@ -675,7 +708,9 @@ function calcular() {
       el.setAttribute('data-tooltip-attached', 'true');
       el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
       el.addEventListener('mouseleave', onTooltipMouseLeave);
-      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
+      el.addEventListener('touchstart', (e) => onTooltipTouchStart(e, tt));
+      el.addEventListener('touchend', onTooltipTouchEnd);
+      el.addEventListener('touchcancel', onTooltipTouchCancel);
     }
   });
 
@@ -689,7 +724,6 @@ function calcular() {
   drawDonutInteractive(segments);
   buildLegend(segments, brutoTotal);
   
-  // Reinicializar tooltips después de actualizar el DOM
   setTimeout(() => {
     initTooltips();
   }, 50);
@@ -718,11 +752,15 @@ function setupComunidadSelector() {
   }
 }
 
-// Eventos globales
-window.addEventListener('scroll', onScrollOrTouchMove);
-window.addEventListener('touchmove', onScrollOrTouchMove);
+// Eventos globales (optimizados sin warnings)
+window.addEventListener('scroll', onScroll);
+window.addEventListener('touchmove', onScroll);
 
-// Event listeners
+// Cerrar tooltips al hacer click/tap fuera
+document.addEventListener('click', onDocumentClick);
+document.addEventListener('touchstart', onDocumentClick);
+
+// Event listeners de inputs
 const brutoAnual = document.getElementById('brutoAnual');
 const extraMes = document.getElementById('extraMes');
 const ayudaMes = document.getElementById('ayudaMes');
