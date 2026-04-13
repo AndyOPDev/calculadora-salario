@@ -93,6 +93,37 @@ function onComunidadChange() {
 }
 
 // ============================================================
+// TEXTOS DE TOOLTIPS
+// ============================================================
+
+const tooltipsText = {
+  brutoAnual: 'Salario bruto anual antes de impuestos. Incluye todas las pagas extraordinarias, bonus fijos y conceptos salariales.',
+  extraMes: 'Plus por disponibilidad, guardias locales o atencion continuada. Se paga mensualmente y tributa como salario normal.',
+  ayudaMes: 'Ayuda para suministros (luz, agua, internet) o comunicaciones. Esta exenta de IRPF segun convenio.',
+  retencionEmpresa: 'Porcentaje de IRPF que aparece en tu nomina como "Retencion a cuenta del IRPF". Si es mayor que tu tipo efectivo, Hacienda te devolvera la diferencia.',
+  dBruto: 'Salario base anual acordado en tu contrato, sin incluir pluses ni complementos.',
+  dExtra: 'Suma anual del plus de disponibilidad o guardias (multiplicado por 12 meses).',
+  dBrutoTotal: 'Base total sobre la que se calculan las cotizaciones a la Seguridad Social y el IRPF.',
+  dSS: 'Cotizacion del trabajador a la Seguridad Social: contingencias comunes (4,70%), desempleo (1,55%), formacion profesional (0,10%) y MEI (0,13%). Total 6,48%.',
+  dRNT: 'Rendimiento neto del trabajo = bruto total - cotizaciones SS.',
+  dReduc: 'Reduccion por rendimientos del trabajo (articulo 20 de la ley IRPF). Aplica solo si no hay otras rentas superiores a 6.500 €.',
+  dBL: 'Base liquidable = rendimiento neto - reduccion. Es la base sobre la que se aplican los minimos personales.',
+  dBI: 'Base imponible = base liquidable - minimo personal (5.550 euros). Sobre esta base se aplican los tramos IRPF.',
+  dCuotaTotal: 'Suma de cuota estatal + autonómica. Es lo que pagas de IRPF al año.',
+  dTipoEfectivo: 'Porcentaje real de IRPF que pagas sobre tu salario bruto total. No es el tipo marginal.',
+  dAyuda: 'Ayuda exenta de suministros o comunicaciones. No tributa ni cotiza.',
+  dNetoAnual: 'Cantidad neta que recibes al año despues de impuestos y seguridad social, mas ayudas exentas.',
+  netoMesLabel: 'Cantidad que ingresara en tu cuenta bancaria por cada paga (mensual o extra), despues de impuestos y cotizaciones.',
+  netoExtraLabel: 'Cantidad neta por paga cuando incluyes el plus de guardias o disponibilidad.',
+  tipoMarginal: 'El tipo marginal es el porcentaje que pagas por cada euro adicional que ganas. Es el tramo mas alto que alcanza tu salario.',
+  tipoEfectivo: 'El tipo efectivo es el porcentaje real que pagas sobre el total de tu salario. Suele ser menor que el tipo marginal.',
+  netoValue: 'Cantidad neta que ingresara en tu cuenta por cada paga, despues de impuestos y cotizaciones.',
+  netoAnualValue: 'Cantidad neta total que recibes al año despues de impuestos y seguridad social, mas ayudas exentas.',
+  cuotaTotalValue: 'Cantidad total que pagas de IRPF al año. Suma de cuota estatal + autonómica.',
+  ssValue: 'Cotizacion del trabajador a la Seguridad Social: contingencias comunes (4,70%), desempleo (1,55%), formacion profesional (0,10%) y MEI (0,13%). Total 6,48%.'
+};
+
+// ============================================================
 // TOOLTIPS OPTIMIZADOS PARA MÓVIL
 // ============================================================
 
@@ -117,6 +148,10 @@ function hideChartTooltip() {
 }
 
 function showChartTooltip(event, text, isTap = false) {
+  if (isTap && activeTooltipElement === event.currentTarget && chartTooltip?.classList.contains('visible')) {
+    return;
+  }
+  
   hideChartTooltip();
   
   const tooltip = createChartTooltip();
@@ -131,22 +166,29 @@ function showChartTooltip(event, text, isTap = false) {
     clientY = event.clientY;
   }
   
-  let x = clientX + 15;
-  let y = clientY - 10;
-  
   tooltip.classList.add('visible');
   
   setTimeout(() => {
     const tooltipRect = tooltip.getBoundingClientRect();
-    if (x + tooltipRect.width > window.innerWidth) x = clientX - tooltipRect.width - 10;
-    if (y + tooltipRect.height > window.innerHeight) y = clientY - tooltipRect.height - 10;
+    let x = clientX + 10;
+    let y = clientY - 10;
+    
+    if (x + tooltipRect.width > window.innerWidth - 10) {
+      x = clientX - tooltipRect.width - 10;
+    }
     if (x < 10) x = 10;
+    if (y + tooltipRect.height > window.innerHeight - 10) {
+      y = clientY - tooltipRect.height - 10;
+    }
     if (y < 10) y = 10;
+    
     tooltip.style.left = x + 'px';
     tooltip.style.top = y + 'px';
   }, 10);
   
-  if (isTap) activeTooltipElement = event.currentTarget;
+  if (isTap) {
+    activeTooltipElement = event.currentTarget;
+  }
 }
 
 function onTooltipTap(event, text) {
@@ -160,7 +202,9 @@ function onTooltipMouseEnter(event, text) {
 }
 
 function onTooltipMouseLeave() {
-  if (!activeTooltipElement) hideChartTooltip();
+  if (!activeTooltipElement) {
+    hideChartTooltip();
+  }
 }
 
 function onScrollOrTouchMove() {
@@ -168,35 +212,93 @@ function onScrollOrTouchMove() {
   scrollTimer = setTimeout(() => {
     hideChartTooltip();
     scrollTimer = null;
-  }, 100);
+  }, 50);
 }
 
 // ============================================================
-// TEXTOS DE TOOLTIPS
+// DONUT CHART INTERACTIVO
 // ============================================================
 
-const tooltipsText = {
-  brutoAnual: 'Salario bruto anual antes de impuestos. Incluye todas las pagas extraordinarias, bonus fijos y conceptos salariales.',
-  extraMes: 'Plus por disponibilidad, guardias locales o atencion continuada. Se paga mensualmente y tributa como salario normal.',
-  ayudaMes: 'Ayuda para suministros (luz, agua, internet) o comunicaciones. Esta exenta de IRPF segun convenio.',
-  retencionEmpresa: 'Porcentaje de IRPF que aparece en tu nomina como "Retencion a cuenta del IRPF". Si es mayor que tu tipo efectivo, Hacienda te devolvera la diferencia.',
-  dBruto: 'Salario base anual acordado en tu contrato, sin incluir pluses ni complementos.',
-  dExtra: 'Suma anual del plus de disponibilidad o guardias (multiplicado por 12 meses).',
-  dBrutoTotal: 'Base total sobre la que se calculan las cotizaciones a la Seguridad Social y el IRPF.',
-  dSS: 'Cotizacion del trabajador a la Seguridad Social: contingencias comunes (4,70%), desempleo (1,55%), formacion profesional (0,10%) y MEI (0,13%). Total 6,48%.',
-  dRNT: 'Rendimiento neto del trabajo = bruto total - cotizaciones SS.',
-  dReduc: 'Reduccion por rendimientos del trabajo (articulo 20 de la ley IRPF). Aplica solo si no hay otras rentas superiores a 6.500 €.',
-  dBL: 'Base liquidable = rendimiento neto - reduccion. Es la base sobre la que se aplican los minimos personales.',
-  dBI: 'Base imponible = base liquidable - minimo personal (5.550 euros). Sobre esta base se aplican los tramos IRPF.',
-  dCuotaTotal: 'Suma de cuota estatal + autonómica. Es lo que pagas de IRPF al año.',
-  dTipoEfectivo: 'Porcentaje real de IRPF que pagas sobre tu salario bruto total. No es el tipo marginal.',
-  dAyuda: 'Ayuda exenta de suministros o comunicaciones. No tributa ni cotiza.',
-  dNetoAnual: 'Cantidad neta que recibes al año despues de impuestos y seguridad social, mas ayudas exentas.',
-  netoMesLabel: 'Cantidad que ingresara en tu cuenta bancaria por cada paga (mensual o extra), despues de impuestos y cotizaciones.',
-  netoExtraLabel: 'Cantidad neta por paga cuando incluyes el plus de guardias o disponibilidad.',
-  tipoMarginal: 'El tipo marginal es el porcentaje que pagas por cada euro adicional que ganas. Es el tramo mas alto que alcanza tu salario.',
-  tipoEfectivo: 'El tipo efectivo es el porcentaje real que pagas sobre el total de tu salario. Suele ser menor que el tipo marginal.'
-};
+function drawDonutInteractive(segments) {
+  const svg = document.getElementById('donutSvg');
+  if (!svg) return;
+  
+  const cx = 75, cy = 75, r = 58, strokeW = 22;
+  const circ = 2 * Math.PI * r;
+  const total = segments.reduce((s, x) => s + x.val, 0);
+  let html = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e1e22" stroke-width="${strokeW}"/>`;
+  let offset = 0;
+  
+  segments.forEach((seg, idx) => {
+    const pct = seg.val / total;
+    const dash = pct * circ;
+    const gap = circ - dash;
+    let tooltipText = '';
+    if (seg.label === 'Neto') tooltipText = 'Neto\nEl dinero que realmente llega a tu bolsillo despues de pagar impuestos y cotizaciones sociales.\n\n';
+    else if (seg.label === 'IRPF') tooltipText = 'IRPF\nImpuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...\n\n';
+    else tooltipText = 'Seguridad Social\nFinancia: pensiones, desempleo, bajas laborales, formacion profesional...\n\n';
+    tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
+    
+    html += `<circle
+      cx="${cx}" cy="${cy}" r="${r}"
+      fill="none"
+      stroke="${seg.color}"
+      stroke-width="${strokeW}"
+      stroke-dasharray="${dash.toFixed(3)} ${gap.toFixed(3)}"
+      stroke-dashoffset="${(circ * (1 - offset + 0.25)).toFixed(3)}"
+      style="transition: stroke-dasharray 0.5s ease; cursor: pointer;"
+      class="donut-segment"
+      data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"
+      data-segment="${idx}"
+    />`;
+    offset += pct;
+  });
+  
+  const netoPct = (segments[0].val / total * 100);
+  html += `<text x="${cx}" y="${cy - 6}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#555560" letter-spacing="1">NETO</text>
+           <text x="${cx}" y="${cy + 10}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#e8ff47" id="donutCenter">${fmtPercent(netoPct, 1)}</text>`;
+  svg.innerHTML = html;
+  
+  document.querySelectorAll('.donut-segment').forEach(el => {
+    const tt = el.dataset.tooltip;
+    if (tt && !el.hasAttribute('data-tooltip-attached')) {
+      el.setAttribute('data-tooltip-attached', 'true');
+      el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
+      el.addEventListener('mouseleave', onTooltipMouseLeave);
+      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
+    }
+  });
+}
+
+function buildLegend(segments, total) {
+  const el = document.getElementById('chartLegend');
+  if (!el) return;
+  
+  el.innerHTML = segments.map(s => {
+    let legendTooltip = '';
+    if (s.label === 'Neto') legendTooltip = 'El dinero que realmente llega a tu bolsillo despues de impuestos y cotizaciones sociales.';
+    else if (s.label === 'IRPF') legendTooltip = 'Impuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...';
+    else legendTooltip = 'Seguridad Social. Financia: pensiones, desempleo, bajas laborales, formacion profesional...';
+    
+    return `<div class="legend-item" style="cursor:help" data-tooltip-text="${legendTooltip.replace(/"/g, '&quot;')}">
+      <div class="legend-dot" style="background:${s.color}"></div>
+      <div class="legend-info">
+        <div class="legend-name">${s.label}</div>
+        <div class="legend-val" style="color:${s.color}">${fmt(s.val, 2)}<span class="legend-pct">${fmtPercent(s.val / total * 100, 1)}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  
+  document.querySelectorAll('.legend-item').forEach(el => {
+    const tt = el.dataset.tooltipText;
+    if (tt && !el.hasAttribute('data-tooltip-attached')) {
+      el.setAttribute('data-tooltip-attached', 'true');
+      el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
+      el.addEventListener('mouseleave', onTooltipMouseLeave);
+      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
+    }
+  });
+}
 
 // ============================================================
 // INICIALIZAR TOOLTIPS
@@ -219,7 +321,7 @@ function initTooltips() {
     }
   });
   
-  // Desglose
+  // Desglose (filas completas)
   const browIds = ['dBruto', 'dExtra', 'dBrutoTotal', 'dSS', 'dRNT', 'dReduc', 'dBL', 'dBI', 'dCuotaTotal', 'dTipoEfectivo', 'dAyuda', 'dNetoAnual'];
   browIds.forEach(id => {
     const element = document.getElementById(id);
@@ -235,7 +337,7 @@ function initTooltips() {
     }
   });
   
-  // Neto mes label
+  // Labels de métricas principales
   const netoMesLabel = document.getElementById('netoMesLabel');
   if (netoMesLabel && !netoMesLabel.hasAttribute('data-tooltip-attached')) {
     netoMesLabel.setAttribute('data-tooltip-attached', 'true');
@@ -271,51 +373,43 @@ function initTooltips() {
       parentLabel.style.cursor = 'help';
     }
   }
-}
-
-// ============================================================
-// DONUT CHART
-// ============================================================
-
-function drawDonutInteractive(segments) {
-  const svg = document.getElementById('donutSvg');
-  if (!svg) return;
   
-  const cx = 75, cy = 75, r = 58, strokeW = 22;
-  const circ = 2 * Math.PI * r;
-  const total = segments.reduce((s, x) => s + x.val, 0);
-  let html = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e1e22" stroke-width="${strokeW}"/>`;
-  let offset = 0;
+  // Valores numéricos importantes
+  const netoMes = document.getElementById('netoMes');
+  if (netoMes && !netoMes.hasAttribute('data-tooltip-attached')) {
+    netoMes.setAttribute('data-tooltip-attached', 'true');
+    netoMes.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.netoValue));
+    netoMes.addEventListener('mouseleave', onTooltipMouseLeave);
+    netoMes.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoValue));
+    netoMes.style.cursor = 'help';
+  }
   
-  segments.forEach(seg => {
-    const pct = seg.val / total;
-    const dash = pct * circ;
-    const gap = circ - dash;
-    let tooltipText = `${seg.label}\n${fmtNumber(seg.val, 2)} €\n${fmtPercent(pct * 100, 1)}`;
-    html += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${strokeW}" stroke-dasharray="${dash.toFixed(3)} ${gap.toFixed(3)}" stroke-dashoffset="${(circ * (1 - offset + 0.25)).toFixed(3)}" style="transition: stroke-dasharray 0.5s ease; cursor: pointer;" class="donut-segment" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"/>`;
-    offset += pct;
-  });
+  const dNetoAnual = document.getElementById('dNetoAnual');
+  if (dNetoAnual && !dNetoAnual.hasAttribute('data-tooltip-attached')) {
+    dNetoAnual.setAttribute('data-tooltip-attached', 'true');
+    dNetoAnual.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.netoAnualValue));
+    dNetoAnual.addEventListener('mouseleave', onTooltipMouseLeave);
+    dNetoAnual.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoAnualValue));
+    dNetoAnual.style.cursor = 'help';
+  }
   
-  const netoPct = (segments[0].val / total * 100);
-  html += `<text x="${cx}" y="${cy - 6}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#555560" letter-spacing="1">NETO</text><text x="${cx}" y="${cy + 10}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#e8ff47" id="donutCenter">${fmtPercent(netoPct, 1)}</text>`;
-  svg.innerHTML = html;
+  const dCuotaTotal = document.getElementById('dCuotaTotal');
+  if (dCuotaTotal && !dCuotaTotal.hasAttribute('data-tooltip-attached')) {
+    dCuotaTotal.setAttribute('data-tooltip-attached', 'true');
+    dCuotaTotal.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.cuotaTotalValue));
+    dCuotaTotal.addEventListener('mouseleave', onTooltipMouseLeave);
+    dCuotaTotal.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.cuotaTotalValue));
+    dCuotaTotal.style.cursor = 'help';
+  }
   
-  document.querySelectorAll('.donut-segment').forEach(el => {
-    const tt = el.dataset.tooltip;
-    if (tt && !el.hasAttribute('data-tooltip-attached')) {
-      el.setAttribute('data-tooltip-attached', 'true');
-      el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
-      el.addEventListener('mouseleave', onTooltipMouseLeave);
-      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
-    }
-  });
-}
-
-function buildLegend(segments, total) {
-  const el = document.getElementById('chartLegend');
-  if (!el) return;
-  
-  el.innerHTML = segments.map(s => `<div class="legend-item" data-tooltip-text=""><div class="legend-dot" style="background:${s.color}"></div><div class="legend-info"><div class="legend-name">${s.label}</div><div class="legend-val" style="color:${s.color}">${fmt(s.val, 2)}<span class="legend-pct">${fmtPercent(s.val / total * 100, 1)}</span></div></div></div>`).join('');
+  const dSS = document.getElementById('dSS');
+  if (dSS && !dSS.hasAttribute('data-tooltip-attached')) {
+    dSS.setAttribute('data-tooltip-attached', 'true');
+    dSS.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tooltipsText.ssValue));
+    dSS.addEventListener('mouseleave', onTooltipMouseLeave);
+    dSS.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.ssValue));
+    dSS.style.cursor = 'help';
+  }
 }
 
 // ============================================================
@@ -380,6 +474,9 @@ function calcular() {
       if (netoExtraLabel) netoExtraLabel.textContent = 'Con guardias ' + pagaLabel;
       if (netoMesExtra) netoMesExtra.textContent = fmtBig(netoPagaTotal);
       if (netoMesExtraSub) netoMesExtraSub.textContent = '+' + fmtBig(extraMes) + ' guardias/mes';
+      metricExtra.style.animation = 'none';
+      void metricExtra.offsetWidth;
+      metricExtra.style.animation = '';
     } else {
       metricExtra.style.display = 'none';
       grid.className = 'result-grid single';
@@ -466,24 +563,80 @@ function calcular() {
     devolucionCard.style.display = 'none';
   }
 
-  // Tramos visuales (simplificado)
+  // Tramos IRPF
+  const colors = ['#47c8ff', '#47ffb2', '#e8ff47', '#ffb847', '#ff7847', '#ff4747'];
+  const umbrales = new Set([
+    ...ESCALA_ESTATAL.map(t => t.hasta),
+    ...ESCALAS_AUTONOMICAS[comunidadActual].escala.map(t => t.hasta)
+  ]);
+  const umbralesOrdenados = [...umbrales].filter(v => v < Infinity).sort((a, b) => a - b);
+  const combined = [];
+  let prev = 0;
+  
+  for (const hasta of umbralesOrdenados) {
+    if (hasta > baseImp) break;
+    let tipoEstatal = 0;
+    for (const t of ESCALA_ESTATAL) if (t.hasta >= hasta) { tipoEstatal = t.tipo; break; }
+    let tipoAut = 0;
+    for (const t of ESCALAS_AUTONOMICAS[comunidadActual].escala) if (t.hasta >= hasta) { tipoAut = t.tipo; break; }
+    const bt = hasta - prev;
+    combined.push({ desde: prev, hasta: hasta, tipo: tipoEstatal + tipoAut, cuota: bt * (tipoEstatal + tipoAut) });
+    prev = hasta;
+  }
+  
+  if (prev < baseImp) {
+    let tipoEstatal = 0;
+    for (const t of ESCALA_ESTATAL) if (t.hasta >= baseImp) { tipoEstatal = t.tipo; break; }
+    let tipoAut = 0;
+    for (const t of ESCALAS_AUTONOMICAS[comunidadActual].escala) if (t.hasta >= baseImp) { tipoAut = t.tipo; break; }
+    const bt = baseImp - prev;
+    combined.push({ desde: prev, hasta: baseImp, tipo: tipoEstatal + tipoAut, cuota: bt * (tipoEstatal + tipoAut) });
+  }
+
+  let tramosHtml = '';
+  combined.forEach((t, i) => {
+    const pct = baseImp > 0 ? ((t.hasta - t.desde) / baseImp * 100) : 0;
+    const color = colors[i % colors.length];
+    const tooltipText = fmtNumber(t.desde) + ' € - ' + fmtNumber(t.hasta) + ' €\nTipo: ' + fmtPercent(t.tipo * 100, 1) + '\nCuota: ' + fmtNumber(t.cuota, 0) + ' €';
+    tramosHtml += `<div class="tramo-item">
+      <div class="tramo-bar-bg">
+        <div class="tramo-bar-fill tooltip-tramo" 
+             style="width:${pct}%; background:${color}; cursor: pointer;"
+             data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
+        </div>
+      </div>
+    </div>`;
+  });
+
   const tramosViz = document.getElementById('tramosViz');
   if (tramosViz) {
-    tramosViz.innerHTML = '<div style="color:var(--muted);font-family:var(--mono);font-size:0.75rem">Tramos calculados correctamente</div>';
+    tramosViz.innerHTML = tramosHtml || '<div style="color:var(--muted);font-family:var(--mono);font-size:0.75rem">Base imponible es 0 o negativa.</div>';
   }
+
+  document.querySelectorAll('.tooltip-tramo').forEach(el => {
+    const tt = el.dataset.tooltip;
+    if (tt && !el.hasAttribute('data-tooltip-attached')) {
+      el.setAttribute('data-tooltip-attached', 'true');
+      el.addEventListener('mouseenter', (e) => onTooltipMouseEnter(e, tt));
+      el.addEventListener('mouseleave', onTooltipMouseLeave);
+      el.addEventListener('touchstart', (e) => onTooltipTap(e, tt));
+    }
+  });
 
   // Donut chart
   const brutoTotal = brutoSujeto + ayudaAnual;
-  drawDonutInteractive([
+  const segments = [
     { label: 'Neto', val: netoAnual, color: '#e8ff47' },
     { label: 'IRPF', val: cuotaTotal, color: '#ff5757' },
     { label: 'Seguridad Social', val: ss, color: '#47c8ff' }
-  ]);
-  buildLegend([
-    { label: 'Neto', val: netoAnual, color: '#e8ff47' },
-    { label: 'IRPF', val: cuotaTotal, color: '#ff5757' },
-    { label: 'Seguridad Social', val: ss, color: '#47c8ff' }
-  ], brutoTotal);
+  ];
+  drawDonutInteractive(segments);
+  buildLegend(segments, brutoTotal);
+  
+  // Reinicializar tooltips después de actualizar el DOM
+  setTimeout(() => {
+    initTooltips();
+  }, 50);
 }
 
 // ============================================================
