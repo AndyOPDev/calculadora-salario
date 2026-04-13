@@ -29,7 +29,7 @@ const SS_TOTAL = 0.0470 + 0.0155 + 0.0010 + 0.0013;
 const MINIMO_PERSONAL = 5550;
 
 // ============================================================
-// FUNCIONES DE FORMATO
+// FUNCIONES DE FORMATO (exportadas globalmente para otros módulos)
 // ============================================================
 
 function formatearNumero(numero, decimales = 0) {
@@ -48,6 +48,13 @@ function fmt(n, d = 0) { return formatearNumero(n, d) + ' €'; }
 function fmtBig(n) { return formatearNumero(n, 2) + ' €'; }
 function fmtNumber(n, d = 0) { return formatearNumero(n, d); }
 function fmtPercent(n, d = 2) { return formatearNumero(n, d) + '%'; }
+
+// Exportar funciones de formato globalmente para otros módulos
+window.fmt = fmt;
+window.fmtBig = fmtBig;
+window.fmtNumber = fmtNumber;
+window.fmtPercent = fmtPercent;
+window.formatearNumero = formatearNumero;
 
 function setMode(is14) {
   const toggle = document.getElementById('togglePagas');
@@ -77,6 +84,9 @@ function calcularCuotaTotal(baseImponible) {
   const escalaAut = ESCALAS_AUTONOMICAS[comunidadActual]?.escala || ESCALAS_AUTONOMICAS.murcia.escala;
   return calcularCuota(baseImponible, ESCALA_ESTATAL) + calcularCuota(baseImponible, escalaAut);
 }
+
+// Exportar calcularCuotaTotal globalmente para el módulo renta.js
+window.calcularCuotaTotalGlobal = calcularCuotaTotal;
 
 function cambiarComunidad(comunidadId) {
   if (ESCALAS_AUTONOMICAS[comunidadId]) {
@@ -502,6 +512,33 @@ function initTooltips() {
 }
 
 // ============================================================
+// NAVEGACIÓN ENTRE PESTAÑAS
+// ============================================================
+
+function mostrarPestana(pestana) {
+  const calculadoraPanel = document.getElementById('calculadoraPanel');
+  const rentaPanel = document.getElementById('rentaPanel');
+  const tabCalc = document.getElementById('tabCalculadoraBtn');
+  const tabRenta = document.getElementById('tabRentaBtn');
+  
+  if (pestana === 'calculadora') {
+    if (calculadoraPanel) calculadoraPanel.style.display = 'block';
+    if (rentaPanel) rentaPanel.style.display = 'none';
+    if (tabCalc) tabCalc.classList.add('active');
+    if (tabRenta) tabRenta.classList.remove('active');
+  } else {
+    if (calculadoraPanel) calculadoraPanel.style.display = 'none';
+    if (rentaPanel) rentaPanel.style.display = 'block';
+    if (tabCalc) tabCalc.classList.remove('active');
+    if (tabRenta) tabRenta.classList.add('active');
+    // Forzar cálculo de renta
+    if (typeof window.calcularRenta === 'function') {
+      setTimeout(window.calcularRenta, 100);
+    }
+  }
+}
+
+// ============================================================
 // CALCULO PRINCIPAL
 // ============================================================
 
@@ -537,6 +574,19 @@ function calcular() {
   const netoAnualBase = brutoBase / brutoSujeto * (brutoSujeto - ss - cuotaTotal) + ayudaAnual;
   const netoPagaBase = netoAnualBase / numPagas;
   const netoPagaTotal = netoAnual / numPagas;
+
+  // Guardar variables globales para la pestaña de renta
+  window.baseImponibleGeneral = baseImp;
+  window.MINIMO_PERSONAL_GLOBAL = MINIMO_PERSONAL;
+  window.tipoEfectivoGeneral = tipoEfect;
+  
+  const retencionEmpresa = parseFloat(document.getElementById('retencionEmpresa')?.value) || 0;
+  if (retencionEmpresa > 0) {
+    window.retencionesTrabajo = brutoSujeto * (retencionEmpresa / 100);
+  } else {
+    // Si no hay retención introducida, usar el tipo efectivo calculado
+    window.retencionesTrabajo = brutoSujeto * (tipoEfect / 100);
+  }
 
   const resultCard = document.getElementById('resultCard');
   if (resultCard) resultCard.style.display = 'block';
@@ -616,7 +666,6 @@ function calcular() {
   if (tipoMarginalElem) tipoMarginalElem.textContent = fmtPercent(tipoMarginal, 2);
 
   // Devolucion
-  const retencionEmpresa = parseFloat(document.getElementById('retencionEmpresa')?.value) || 0;
   const devolucionCard = document.getElementById('devolucionCard');
   
   if (retencionEmpresa > 0 && brutoSujeto > 0 && devolucionCard) {
@@ -726,6 +775,10 @@ function calcular() {
   
   setTimeout(() => {
     initTooltips();
+    // Actualizar la pestaña de renta si está visible
+    if (typeof calcularRenta === 'function' && document.getElementById('rentaPanel')?.style.display === 'block') {
+      calcularRenta();
+    }
   }, 50);
 }
 
@@ -771,10 +824,30 @@ if (brutoAnual) brutoAnual.addEventListener('input', calcular);
 if (extraMes) extraMes.addEventListener('input', calcular);
 if (ayudaMes) ayudaMes.addEventListener('input', calcular);
 if (togglePagas) togglePagas.addEventListener('change', calcular);
-if (retencionEmpresa) retencionEmpresa.addEventListener('input', calcular);
+if (retencionEmpresa) {
+  retencionEmpresa.addEventListener('input', () => {
+    calcular();
+    if (typeof calcularRenta === 'function' && document.getElementById('rentaPanel')?.style.display === 'block') {
+      setTimeout(calcularRenta, 100);
+    }
+  });
+}
+
+// Event listeners de pestañas
+const tabCalculadoraBtn = document.getElementById('tabCalculadoraBtn');
+const tabRentaBtn = document.getElementById('tabRentaBtn');
+if (tabCalculadoraBtn) tabCalculadoraBtn.addEventListener('click', () => mostrarPestana('calculadora'));
+if (tabRentaBtn) tabRentaBtn.addEventListener('click', () => mostrarPestana('renta'));
 
 document.addEventListener('DOMContentLoaded', () => {
   setupComunidadSelector();
   initTooltips();
   calcular();
+  // Asegurar que la pestaña calculadora es la visible por defecto
+  mostrarPestana('calculadora');
+
+  // Inicializar simulador de renta
+  if (typeof initRentaListeners === 'function') {
+    initRentaListeners();
+  }
 });

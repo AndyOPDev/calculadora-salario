@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Calculadora Salario Neto · España</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,181 +17,307 @@
     <h1>Calculadora Salario</h1>
   </header>
 
-  <!-- Inputs -->
-  <div class="card">
-    <div class="card-title">Datos de entrada</div>
+  <!-- Pestañas -->
+  <div class="tabs">
+    <button id="tabCalculadoraBtn" class="tab-btn active">Calculadora neto</button>
+    <button id="tabRentaBtn" class="tab-btn">Simulador Renta</button>
+  </div>
 
-    <div class="input-grid">
-      <div class="field">
-        <label>Salario bruto base anual</label>
-        <div class="field-wrap">
-          <input type="number" id="brutoAnual" value="31405" min="0" step="100">
-          <span class="unit">€/año</span>
+  <!-- Panel de la Calculadora (pestaña 1) -->
+  <div id="calculadoraPanel" class="panel">
+
+    <!-- Inputs -->
+    <div class="card">
+      <div class="card-title">Datos de entrada</div>
+
+      <div class="input-grid">
+        <div class="field">
+          <label>Salario bruto base anual</label>
+          <div class="field-wrap">
+            <input type="number" id="brutoAnual" value="31405" min="0" step="100">
+            <span class="unit">€/año</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Guardias / Bonus <span class="hint">(bruto mensual)</span></label>
+          <div class="field-wrap">
+            <input type="number" id="extraMes" value="791" min="0" step="10">
+            <span class="unit">€/mes</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Ayuda suministros / dietas <span class="hint">(exenta IRPF)</span></label>
+          <div class="field-wrap">
+            <input type="number" id="ayudaMes" value="18.34" min="0" step="0.01">
+            <span class="unit">€/mes</span>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label>Guardias / Bonus <span class="hint">(bruto mensual)</span></label>
-        <div class="field-wrap">
-          <input type="number" id="extraMes" value="791" min="0" step="10">
-          <span class="unit">€/mes</span>
-        </div>
+
+      <!-- Selector de comunidad autónoma -->
+      <div class="field" style="margin-bottom: 1rem;">
+        <label>Comunidad Autónoma</label>
+        <select id="selectorComunidad" class="comunidad-select">
+          <!-- Las opciones se generarán automáticamente desde JavaScript -->
+        </select>
       </div>
-      <div class="field">
-        <label>Ayuda suministros / dietas <span class="hint">(exenta IRPF)</span></label>
+
+      <!-- Campo de retención de la empresa -->
+      <div class="field" style="margin-bottom: 1rem;">
+        <label>Retención IRPF aplicada por empresa</label>
         <div class="field-wrap">
-          <input type="number" id="ayudaMes" value="18,34" min="0" step="0.01">
-          <span class="unit">€/mes</span>
+          <input type="number" id="retencionEmpresa" value="" step="0.01" placeholder="Ej: 18,80">
+          <span class="unit">%</span>
         </div>
+        <div class="hint">Introduce el porcentaje que aparece en tu nómina como "Retención IRPF"</div>
+      </div>
+
+      <!-- Toggle de pagas -->
+      <div class="toggle-row" style="margin-top: 0.5rem;">
+        <span class="toggle-lbl" id="lbl12" onclick="setMode(false)">12 pagas</span>
+        <label class="ios-toggle">
+          <input type="checkbox" id="togglePagas" checked onchange="calcular()">
+          <span class="ios-slider"></span>
+        </label>
+        <span class="toggle-lbl active" id="lbl14" onclick="setMode(true)">14 pagas</span>
       </div>
     </div>
 
-    <!-- Selector de comunidad autónoma -->
-    <div class="field" style="margin-bottom: 1rem;">
-      <label>Comunidad Autónoma</label>
-      <select id="selectorComunidad" style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 0.9rem; padding: 0.6rem 0.8rem;">
-        <!-- Las opciones se generarán automáticamente desde JavaScript -->
-      </select>
-    </div>
+    <!-- Resultados -->
+    <div class="card" id="resultCard" style="display:none">
+      <div class="card-title">Resultado estimado</div>
 
-    <!-- Campo de retención de la empresa -->
-    <div class="field" style="margin-bottom: 1rem;">
-      <label>Retención IRPF aplicada por empresa</label>
-      <div class="field-wrap">
-        <input type="number" id="retencionEmpresa" value="" step="0.01" placeholder="Ej: 18,80">
-        <span class="unit">%</span>
+      <div class="result-grid single" id="resultGrid">
+        <div class="metric highlight">
+          <div class="metric-label" id="netoMesLabel">Neto por paga</div>
+          <div class="metric-value" id="netoMes">---</div>
+          <div class="metric-sub" id="netoMesSub"></div>
+        </div>
+        <div class="metric highlight2" id="metricExtra" style="display:none">
+          <div class="metric-label" id="netoExtraLabel">Con guardias</div>
+          <div class="metric-value" id="netoMesExtra">---</div>
+          <div class="metric-sub" id="netoMesExtraSub"></div>
+        </div>
       </div>
-    </div>
 
-    <!-- Toggle de pagas -->
-    <div class="toggle-row" style="margin-top: 0.5rem;">
-      <span class="toggle-lbl" id="lbl12" onclick="setMode(false)">12 pagas</span>
-      <label class="ios-toggle">
-        <input type="checkbox" id="togglePagas" checked onchange="calcular()">
-        <span class="ios-slider"></span>
-      </label>
-      <span class="toggle-lbl active" id="lbl14" onclick="setMode(true)">14 pagas</span>
+      <!-- Devolución / pago adicional -->
+      <div class="breakdown" id="devolucionCard" style="display: none; margin-top: 1rem;">
+        <div class="breakdown-title">Declaración de la Renta</div>
+        <div class="result-grid single">
+          <div class="metric" id="devolucionMetric">
+            <div class="metric-label" id="devolucionLabel">Resultado</div>
+            <div class="metric-value" id="devolucionValue">---</div>
+            <div class="metric-sub" id="devolucionSub">Comparativa retención vs IRPF real</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desglose -->
+      <div class="breakdown">
+        <div class="breakdown-title">Desglose anual</div>
+
+        <div class="brow" id="rowBrutoBase">
+          <span class="name">Bruto base anual</span>
+          <span class="val neutral" id="dBruto">---</span>
+        </div>
+        <div class="brow" id="rowExtra">
+          <span class="name">Plus guardias / bonus (x12)</span>
+          <span class="val neutral" id="dExtra">---</span>
+        </div>
+        <div class="brow" id="rowBrutoTotal">
+          <span class="name">Base total sujeta a SS e IRPF</span>
+          <span class="val neutral" id="dBrutoTotal">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">- Cotizacion SS trabajador (6,48%)</span>
+          <span class="val neg" id="dSS">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">= Rendimiento neto trabajo</span>
+          <span class="val neutral" id="dRNT">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">- Reduccion rend. trabajo (art. 20)</span>
+          <span class="val neg" id="dReduc">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">= Base liquidable</span>
+          <span class="val neutral" id="dBL">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">- Minimo personal (5.550 €)</span>
+          <span class="val neg">-5.550 €</span>
+        </div>
+        <div class="brow">
+          <span class="name">= Base imponible IRPF</span>
+          <span class="val neutral" id="dBI">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">Cuota IRPF total</span>
+          <span class="val neg" id="dCuotaTotal">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">Tipo efectivo IRPF</span>
+          <span class="val neg" id="dTipoEfectivo">---</span>
+        </div>
+        <div class="brow">
+          <span class="name">+ Ayuda exenta (no tributa)</span>
+          <span class="val pos" id="dAyuda">---</span>
+        </div>
+        <div class="brow total">
+          <span class="name">NETO ANUAL</span>
+          <span class="val" id="dNetoAnual">---</span>
+        </div>
+      </div>
+
+      <!-- Resumen ejecutivo -->
+      <div class="breakdown" style="margin-top: 1rem;">
+        <div class="breakdown-title">Resumen ejecutivo</div>
+        <div class="result-grid double" style="margin-bottom: 0;">
+          <div class="metric">
+            <div class="metric-label">Tipo marginal IRPF</div>
+            <div class="metric-value" id="tipoMarginal" style="color: var(--orange);">---</div>
+            <div class="metric-sub">Ultimo tramo aplicado</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Tipo efectivo IRPF</div>
+            <div class="metric-value" id="tipoEfectivoResumen" style="color: var(--accent);">---</div>
+            <div class="metric-sub">Sobre bruto total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tramos -->
+      <div class="tramos">
+        <div class="breakdown-title">Tramos IRPF aplicados</div>
+        <div id="tramosViz"></div>
+      </div>
+
+      <!-- Donut -->
+      <div class="chart-wrap">
+        <svg class="donut-svg" id="donutSvg" width="150" height="150" viewBox="0 0 150 150"></svg>
+        <div class="chart-legend" id="chartLegend"></div>
+      </div>
+
     </div>
   </div>
 
-  <!-- Resultados -->
-  <div class="card" id="resultCard" style="display:none">
-    <div class="card-title">Resultado estimado</div>
+<!-- Panel del Simulador de Renta (pestaña 2) -->
+<div id="rentaPanel" class="panel" style="display: none;">
+  <div class="card">
+    <div class="card-title">SIMULADOR DE RENTA 2025</div>
 
-    <div class="result-grid single" id="resultGrid">
-      <div class="metric highlight">
-        <div class="metric-label" id="netoMesLabel">Neto por paga</div>
-        <div class="metric-value" id="netoMes">---</div>
-        <div class="metric-sub" id="netoMesSub"></div>
-      </div>
-      <div class="metric highlight2" id="metricExtra" style="display:none">
-        <div class="metric-label" id="netoExtraLabel">Con guardias</div>
-        <div class="metric-value" id="netoMesExtra">---</div>
-        <div class="metric-sub" id="netoMesExtraSub"></div>
-      </div>
-    </div>
-
-    <!-- Devolución / pago adicional -->
-    <div class="breakdown" id="devolucionCard" style="display: none; margin-top: 1rem;">
-      <div class="breakdown-title">Declaración de la Renta</div>
-      <div class="result-grid single">
-        <div class="metric" id="devolucionMetric">
-          <div class="metric-label" id="devolucionLabel">Resultado</div>
-          <div class="metric-value" id="devolucionValue">---</div>
-          <div class="metric-sub" id="devolucionSub">Comparativa retención vs IRPF real</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Desglose -->
+    <!-- Bloque: Rendimientos del capital -->
     <div class="breakdown">
-      <div class="breakdown-title">Desglose anual</div>
+      <div class="breakdown-title">Rendimientos del capital (inversiones)</div>
 
-      <div class="brow" id="rowBrutoBase">
-        <span class="name">Bruto base anual</span>
-        <span class="val neutral" id="dBruto">---</span>
-      </div>
-      <div class="brow" id="rowExtra">
-        <span class="name">Plus guardias / bonus (x12)</span>
-        <span class="val neutral" id="dExtra">---</span>
-      </div>
-      <div class="brow" id="rowBrutoTotal">
-        <span class="name">Base total sujeta a SS e IRPF</span>
-        <span class="val neutral" id="dBrutoTotal">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">- Cotizacion SS trabajador (6,48%)</span>
-        <span class="val neg" id="dSS">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">= Rendimiento neto trabajo</span>
-        <span class="val neutral" id="dRNT">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">- Reduccion rend. trabajo (art. 20)</span>
-        <span class="val neg" id="dReduc">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">= Base liquidable</span>
-        <span class="val neutral" id="dBL">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">- Minimo personal (5.550 €)</span>
-        <span class="val neg">-5.550 €</span>
-      </div>
-      <div class="brow">
-        <span class="name">= Base imponible IRPF</span>
-        <span class="val neutral" id="dBI">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">Cuota IRPF total</span>
-        <span class="val neg" id="dCuotaTotal">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">Tipo efectivo IRPF</span>
-        <span class="val neg" id="dTipoEfectivo">---</span>
-      </div>
-      <div class="brow">
-        <span class="name">+ Ayuda exenta (no tributa)</span>
-        <span class="val pos" id="dAyuda">---</span>
-      </div>
-      <div class="brow total">
-        <span class="name">NETO ANUAL</span>
-        <span class="val" id="dNetoAnual">---</span>
-      </div>
-    </div>
-
-    <!-- Resumen ejecutivo -->
-    <div class="breakdown" style="margin-top: 1rem;">
-      <div class="breakdown-title">Resumen ejecutivo</div>
-      <div class="result-grid double" style="margin-bottom: 0;">
-        <div class="metric">
-          <div class="metric-label">Tipo marginal IRPF</div>
-          <div class="metric-value" id="tipoMarginal" style="color: var(--orange);">---</div>
-          <div class="metric-sub">Ultimo tramo aplicado</div>
+      <!-- Intereses -->
+      <div class="input-grid">
+        <div class="field">
+          <label>Intereses de cuentas / depositos</label>
+          <div class="field-wrap">
+            <input type="number" id="intereses" value="0" step="10">
+            <span class="unit">€/año</span>
+          </div>
+          <div class="field-row">
+            <label>
+              <input type="checkbox" id="interesesExtranjero"> Origen extranjero (sin retencion)
+            </label>
+          </div>
+          <div class="hint">Bancos españoles retienen el 19% en origen</div>
         </div>
-        <div class="metric">
-          <div class="metric-label">Tipo efectivo IRPF</div>
-          <div class="metric-value" id="tipoEfectivoResumen" style="color: var(--accent);">---</div>
-          <div class="metric-sub">Sobre bruto total</div>
+
+        <!-- Dividendos -->
+        <div class="field">
+          <label>Dividendos de acciones</label>
+          <div class="field-wrap">
+            <input type="number" id="dividendos" value="0" step="10">
+            <span class="unit">€/año</span>
+          </div>
+          <div class="field-row">
+            <label>
+              <input type="checkbox" id="dividendosExtranjero"> Origen extranjero (sin retencion)
+            </label>
+          </div>
+          <div class="hint">Empresas españolas retienen el 19% en origen</div>
         </div>
       </div>
+
+      <!-- Ganancias y pérdidas patrimoniales -->
+      <div class="input-grid" style="margin-top: 0.5rem;">
+        <div class="field">
+          <label>Ganancias patrimoniales (venta de activos)</label>
+          <div class="field-wrap">
+            <input type="number" id="ganancias" value="0" step="10">
+            <span class="unit">€/año</span>
+          </div>
+          <div class="hint">Acciones, fondos, ETF, criptomonedas, inmuebles... Sin retencion en origen</div>
+        </div>
+        <div class="field">
+          <label>Perdidas patrimoniales</label>
+          <div class="field-wrap">
+            <input type="number" id="perdidas" value="0" step="10">
+            <span class="unit">€/año</span>
+          </div>
+          <div class="hint">Compensan las ganancias patrimoniales del mismo año</div>
+        </div>
+      </div>
+
+      <!-- Perdidas de años anteriores -->
+      <div class="field" style="margin-top: 0.5rem;">
+        <label>Perdidas patrimoniales de años anteriores (sin compensar)</label>
+        <div class="field-wrap">
+          <input type="number" id="perdidasAnteriores" value="0" step="10">
+          <span class="unit">€/año</span>
+        </div>
+        <div class="hint">Se pueden arrastrar hasta 4 años. Compensan hasta el 25% de los rendimientos del capital</div>
+      </div>
     </div>
 
-    <!-- Tramos -->
-    <div class="tramos">
-      <div class="breakdown-title">Tramos IRPF aplicados</div>
-      <div id="tramosViz"></div>
+    <!-- Bloque: Planes de pensiones -->
+    <div class="breakdown">
+      <div class="breakdown-title">Aportaciones a planes de pensiones</div>
+      <div class="input-grid">
+        <div class="field">
+          <label>Plan de pensiones individual</label>
+          <div class="field-wrap">
+            <input type="number" id="planPensionesIndividual" value="0" step="100">
+            <span class="unit">€/año</span>
+          </div>
+          <div class="hint">Limite anual: 1.500 €</div>
+        </div>
+        <div class="field">
+          <label>Plan de pensiones de empresa</label>
+          <div class="field-wrap">
+            <input type="number" id="planPensionesEmpresa" value="0" step="100">
+            <span class="unit">€/año</span>
+          </div>
+          <div class="hint">Limite anual: 8.500 €</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Donut -->
-    <div class="chart-wrap">
-      <svg class="donut-svg" id="donutSvg" width="150" height="150" viewBox="0 0 150 150"></svg>
-      <div class="chart-legend" id="chartLegend"></div>
+    <!-- Bloque: Resultado -->
+    <div class="breakdown">
+      <div class="breakdown-title">Resultado de la declaracion</div>
+      <div class="result-grid single">
+        <div class="metric">
+          <div class="metric-label">Resultado final</div>
+          <div class="metric-value" id="resultadoRenta">---</div>
+          <div class="metric-sub" id="resultadoRentaSub">---</div>
+        </div>
+      </div>
+      <div id="desgloseRenta" style="margin-top: 1rem;"></div>
     </div>
-
   </div>
 </div>
 
+</div>
+
+<script src="js/utils.js"></script>
+<script src="js/ahorro.js"></script>
+<script src="js/pensiones.js"></script>
+<script src="js/renta.js"></script>
 <script src="js/script.js"></script>
 </body>
 </html>
