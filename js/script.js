@@ -261,10 +261,10 @@ function drawDonutInteractive(segments) {
     const dash = pct * circ;
     const gap = circ - dash;
     let tooltipText = '';
-    if (seg.label === 'Neto') tooltipText = 'Neto\nEl dinero que realmente llega a tu bolsillo despues de pagar impuestos y cotizaciones sociales.';
-    else if (seg.label === 'IRPF') tooltipText = 'IRPF\nImpuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...';
-    else tooltipText = 'Seguridad Social\nFinancia: pensiones, desempleo, bajas laborales, formacion profesional...';
-    tooltipText += '\n\n' + fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
+    //if (seg.label === 'Neto') tooltipText = 'Neto\nEl dinero que realmente llega a tu bolsillo despues de pagar impuestos y cotizaciones sociales.';
+    //else if (seg.label === 'IRPF') tooltipText = 'IRPF\nImpuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...';
+    //else tooltipText = 'Seguridad Social\nFinancia: pensiones, desempleo, bajas laborales, formacion profesional...';
+    tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
     
     html += `<circle
       cx="${cx}" cy="${cy}" r="${r}"
