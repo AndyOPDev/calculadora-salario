@@ -98,11 +98,11 @@ function onComunidadChange() {
 
 const tooltipsText = {
   brutoAnual: 'Salario bruto anual antes de impuestos. Incluye todas las pagas extraordinarias, bonus fijos y conceptos salariales.',
-  extraMes: 'Plus por disponibilidad, guardias locales o atencion continuada. Se paga mensualmente y tributa como salario normal.',
-  ayudaMes: 'Ayuda para suministros (luz, agua, internet) o comunicaciones. Esta exenta de IRPF segun convenio.',
+  extraMes: 'Plus por disponibilidad, guardias locales, atencion continuada, bonus, etc. Se paga mensualmente y tributa como salario normal.',
+  ayudaMes: 'Ayuda para luz, agua, internet, transporte, dietas. Esta exenta de IRPF segun convenio.',
   retencionEmpresa: 'Porcentaje de IRPF que aparece en tu nomina como "Retencion a cuenta del IRPF". Si es mayor que tu tipo efectivo, Hacienda te devolvera la diferencia.',
   dBruto: 'Salario base anual acordado en tu contrato, sin incluir pluses ni complementos.',
-  dExtra: 'Suma anual del plus de disponibilidad o guardias (multiplicado por 12 meses).',
+  dExtra: 'Suma anual del plus de guardias o bonus (multiplicado por 12 meses).',
   dBrutoTotal: 'Base total sobre la que se calculan las cotizaciones a la Seguridad Social y el IRPF.',
   dSS: 'Cotizacion del trabajador a la Seguridad Social: contingencias comunes (4,70%), desempleo (1,55%), formacion profesional (0,10%) y MEI (0,13%). Total 6,48%.',
   dRNT: 'Rendimiento neto del trabajo = bruto total - cotizaciones SS.',
@@ -124,12 +124,11 @@ const tooltipsText = {
 };
 
 // ============================================================
-// TOOLTIPS OPTIMIZADOS PARA MÓVIL
+// TOOLTIPS OPTIMIZADOS PARA MÓVIL - SIN DELAY
 // ============================================================
 
 let chartTooltip = null;
 let activeTooltipElement = null;
-let scrollTimer = null;
 
 function createChartTooltip() {
   if (!chartTooltip) {
@@ -143,11 +142,14 @@ function createChartTooltip() {
 function hideChartTooltip() {
   if (chartTooltip) {
     chartTooltip.classList.remove('visible');
+    chartTooltip.style.left = '-9999px';
+    chartTooltip.style.top = '-9999px';
   }
   activeTooltipElement = null;
 }
 
 function showChartTooltip(event, text, isTap = false) {
+  // Si es el mismo elemento y ya está visible, no hacer nada
   if (isTap && activeTooltipElement === event.currentTarget && chartTooltip?.classList.contains('visible')) {
     return;
   }
@@ -155,8 +157,14 @@ function showChartTooltip(event, text, isTap = false) {
   hideChartTooltip();
   
   const tooltip = createChartTooltip();
-  tooltip.innerHTML = text.replace(/\n/g, '<br>');
+  // Limpiar el texto y convertirlo a HTML con saltos de línea
+  let formattedText = text
+    .replace(/\n/g, '<br>')
+    .replace(/([\.\!])\s/g, '$1<br>'); // Añadir saltos después de puntos
   
+  tooltip.innerHTML = formattedText;
+  
+  // Obtener coordenadas del toque/ratón
   let clientX, clientY;
   if (event.touches) {
     clientX = event.touches[0].clientX;
@@ -168,19 +176,32 @@ function showChartTooltip(event, text, isTap = false) {
   
   tooltip.classList.add('visible');
   
+  // Posicionar después de que el tooltip tenga dimensiones
   setTimeout(() => {
     const tooltipRect = tooltip.getBoundingClientRect();
-    let x = clientX + 10;
-    let y = clientY - 10;
+    let x, y;
     
+    // Posicionar arriba o abajo según espacio disponible
+    if (clientY - tooltipRect.height - 20 > 0) {
+      // Arriba
+      y = clientY - tooltipRect.height - 15;
+    } else {
+      // Abajo
+      y = clientY + 25;
+    }
+    
+    // Centrar horizontalmente, pero sin salirse de la pantalla
+    x = clientX - (tooltipRect.width / 2);
+    
+    // Ajustar si se sale por la izquierda
+    if (x < 10) {
+      x = 10;
+    }
+    
+    // Ajustar si se sale por la derecha
     if (x + tooltipRect.width > window.innerWidth - 10) {
-      x = clientX - tooltipRect.width - 10;
+      x = window.innerWidth - tooltipRect.width - 10;
     }
-    if (x < 10) x = 10;
-    if (y + tooltipRect.height > window.innerHeight - 10) {
-      y = clientY - tooltipRect.height - 10;
-    }
-    if (y < 10) y = 10;
     
     tooltip.style.left = x + 'px';
     tooltip.style.top = y + 'px';
@@ -207,13 +228,43 @@ function onTooltipMouseLeave() {
   }
 }
 
+// Eliminar delay al hacer scroll - ocultar inmediatamente
 function onScrollOrTouchMove() {
-  if (scrollTimer) clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(() => {
+  if (chartTooltip && chartTooltip.classList.contains('visible')) {
     hideChartTooltip();
-    scrollTimer = null;
-  }, 50);
+  }
 }
+
+// También ocultar al tocar cualquier parte de la pantalla (fuera de elementos con tooltip)
+document.addEventListener('touchstart', function(e) {
+  // Verificar si el toque fue en un elemento que tiene tooltip
+  let target = e.target;
+  let isTooltipElement = false;
+  
+  while (target && target !== document.body) {
+    if (target.hasAttribute && target.hasAttribute('data-tooltip-attached')) {
+      isTooltipElement = true;
+      break;
+    }
+    if (target.classList && target.classList.contains('donut-segment')) {
+      isTooltipElement = true;
+      break;
+    }
+    if (target.classList && target.classList.contains('legend-item')) {
+      isTooltipElement = true;
+      break;
+    }
+    if (target.classList && target.classList.contains('tooltip-tramo')) {
+      isTooltipElement = true;
+      break;
+    }
+    target = target.parentElement;
+  }
+  
+  if (!isTooltipElement && chartTooltip && chartTooltip.classList.contains('visible')) {
+    hideChartTooltip();
+  }
+});
 
 // ============================================================
 // DONUT CHART INTERACTIVO
@@ -233,11 +284,16 @@ function drawDonutInteractive(segments) {
     const pct = seg.val / total;
     const dash = pct * circ;
     const gap = circ - dash;
-    let tooltipText = '';
-    if (seg.label === 'Neto') tooltipText = 'Neto\nEl dinero que realmente llega a tu bolsillo despues de pagar impuestos y cotizaciones sociales.\n\n';
-    else if (seg.label === 'IRPF') tooltipText = 'IRPF\nImpuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...\n\n';
-    else tooltipText = 'Seguridad Social\nFinancia: pensiones, desempleo, bajas laborales, formacion profesional...\n\n';
-    tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
+// Dentro de drawDonutInteractive, reemplaza la construcción del tooltipText:
+let tooltipText = '';
+if (seg.label === 'Neto') {
+  tooltipText = 'NETO\nEl dinero que llega a tu bolsillo\n\n';
+} else if (seg.label === 'IRPF') {
+  tooltipText = 'IRPF\nImpuesto sobre la renta\nSanidad · Educación · Infraestructuras · Defensa · Pensiones\n\n';
+} else {
+  tooltipText = 'SEGURIDAD SOCIAL\nPensiones · Desempleo · Bajas laborales · Formación\n\n';
+}
+tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
     
     html += `<circle
       cx="${cx}" cy="${cy}" r="${r}"
