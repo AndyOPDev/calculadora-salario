@@ -16,7 +16,6 @@ window.calcularRenta = function() {
   const dividendosExtEl = document.getElementById('dividendosExtranjero');
   const gananciasEl = document.getElementById('ganancias');
   const perdidasEl = document.getElementById('perdidas');
-  const perdidasAnterioresEl = document.getElementById('perdidasAnteriores');
   const planIndivEl = document.getElementById('planPensionesIndividual');
   const planEmpresaEl = document.getElementById('planPensionesEmpresa');
   const resultadoRentaEl = document.getElementById('resultadoRenta');
@@ -30,7 +29,6 @@ window.calcularRenta = function() {
   const dividendosExtranjero = dividendosExtEl?.checked || false;
   const ganancias = parseFloat(gananciasEl?.value) || 0;
   const perdidas = parseFloat(perdidasEl?.value) || 0;
-  const perdidasAnteriores = parseFloat(perdidasAnterioresEl?.value) || 0;
   const planIndiv = parseFloat(planIndivEl?.value) || 0;
   const planEmpresa = parseFloat(planEmpresaEl?.value) || 0;
 
@@ -42,30 +40,31 @@ window.calcularRenta = function() {
   if (!interesesExtranjero) retencionesAhorro += intereses * 0.19;
   if (!dividendosExtranjero) retencionesAhorro += dividendos * 0.19;
 
-  // 3. Ganancias patrimoniales netas (pérdidas del año compensan ganancias)
+  // 3. Ganancias patrimoniales netas (pérdidas del año compensan ganancias SIN límite)
   let gananciasPatrimonialesNetas = ganancias - perdidas;
+  let excesoPerdidas = 0;
 
-  // 4. Compensación con pérdidas de años anteriores (límite 25% de rendimientosCapital)
-  let perdidasAnterioresUsadas = 0;
-  const limiteCompensacion = rendimientosCapital * 0.25;
-  if (perdidasAnteriores > 0 && gananciasPatrimonialesNetas < 0) {
-    // Si ya hay pérdidas este año, se suman a las anteriores
-    const perdidasTotales = Math.abs(gananciasPatrimonialesNetas) + perdidasAnteriores;
-    perdidasAnterioresUsadas = Math.min(perdidasTotales, limiteCompensacion);
-    gananciasPatrimonialesNetas = 0; // Se compensaron todas
-  } else if (perdidasAnteriores > 0 && rendimientosCapital > 0) {
-    perdidasAnterioresUsadas = Math.min(perdidasAnteriores, limiteCompensacion);
+  if (gananciasPatrimonialesNetas < 0) {
+    excesoPerdidas = Math.abs(gananciasPatrimonialesNetas);
+    gananciasPatrimonialesNetas = 0;
   }
 
-  // 5. Base del ahorro final (después de compensaciones)
-  const baseAhorroFinal = Math.max(0, rendimientosCapital - perdidasAnterioresUsadas);
+  // 4. Compensación del exceso de pérdidas con rendimientos del capital (límite 25%)
+  let perdidasUsadasContraCapital = 0;
+  const limiteCompensacion = rendimientosCapital * 0.25;
+
+  if (excesoPerdidas > 0 && rendimientosCapital > 0) {
+    perdidasUsadasContraCapital = Math.min(excesoPerdidas, limiteCompensacion);
+  }
+
+  // 5. Base del ahorro final (después de compensación)
+  const baseAhorroFinal = Math.max(0, rendimientosCapital - perdidasUsadasContraCapital);
 
   // 6. Cuota del ahorro
   const cuotaAhorro = calcularCuotaAhorro(baseAhorroFinal);
 
-  // 7. Ganancias patrimoniales netas (lo que queda por tributar)
-  const gananciasPatrimonialesTributables = Math.max(0, gananciasPatrimonialesNetas);
-  const cuotaPatrimoniales = calcularCuotaAhorro(gananciasPatrimonialesTributables);
+  // 7. Cuota de las ganancias patrimoniales
+  const cuotaPatrimoniales = calcularCuotaAhorro(gananciasPatrimonialesNetas);
 
   // 8. Cuota total del ahorro
   const cuotaTotalAhorro = cuotaAhorro + cuotaPatrimoniales;
@@ -110,32 +109,79 @@ window.calcularRenta = function() {
     }
   }
 
-  // Mostrar desglose
+  // Mostrar desglose con tooltips
   if (desgloseRentaEl) {
     desgloseRentaEl.innerHTML = `
-      <div class="brow"><span class="name">Base imponible general (trabajo)</span><span class="val neutral">${fmt(baseGeneralOriginal, 2)}</span></div>
-      <div class="brow"><span class="name">- Reduccion plan pensiones</span><span class="val neg">-${fmt(reduccionPensiones, 2)}</span></div>
-      <div class="brow"><span class="name">= Base general final</span><span class="val neutral">${fmt(nuevaBaseGeneral, 2)}</span></div>
-      <div class="brow"><span class="name">Cuota IRPF (general)</span><span class="val neg">-${fmt(nuevaCuotaGeneral, 2)}</span></div>
-      <div class="brow"><span class="name">Rendimientos capital</span><span class="val neutral">${fmt(rendimientosCapital, 2)}</span></div>
-      <div class="brow"><span class="name">- Perdidas anteriores</span><span class="val neg">-${fmt(perdidasAnterioresUsadas, 2)}</span></div>
-      <div class="brow"><span class="name">= Base ahorro final</span><span class="val neutral">${fmt(baseAhorroFinal, 2)}</span></div>
-      <div class="brow"><span class="name">Cuota IRPF (ahorro)</span><span class="val neg">-${fmt(cuotaAhorro, 2)}</span></div>
-      <div class="brow"><span class="name">Ganancias patrimoniales netas</span><span class="val neutral">${fmt(gananciasPatrimonialesTributables, 2)}</span></div>
-      <div class="brow"><span class="name">Cuota IRPF (patrimoniales)</span><span class="val neg">-${fmt(cuotaPatrimoniales, 2)}</span></div>
-      <div class="brow"><span class="name">Retenciones trabajo</span><span class="val pos">+${fmt(retencionesTrabajo, 2)}</span></div>
-      <div class="brow"><span class="name">Retenciones ahorro (19%)</span><span class="val pos">+${fmt(retencionesAhorro, 2)}</span></div>
-      <div class="brow total"><span class="name">RESULTADO</span><span class="val">${resultadoFinal > 0.01 ? 'A devolver ' + fmt(resultadoFinal, 2) : (resultadoFinal < -0.01 ? 'A pagar ' + fmt(Math.abs(resultadoFinal), 2) : '0,00 €')}</span></div>
-      ${perdidasAnterioresUsadas > 0 ? `<div class="brow"><span class="name">Perdidas restantes para proximos años</span><span class="val neutral">${fmt(perdidasAnteriores - perdidasAnterioresUsadas, 2)}</span></div>` : ''}
+      <div class="brow" tooltip-data="Es tu base imponible despues de restar la Seguridad Social, la reduccion por rendimientos del trabajo y el minimo personal. Sobre esta cantidad se calcula el IRPF de tu sueldo.">
+        <span class="name">Base imponible general (trabajo)</span>
+        <span class="val neutral">${fmt(baseGeneralOriginal, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Las aportaciones a planes de pensiones reducen tu base imponible general. Limite individual: 1.500 €, limite empresa: 8.500 €.">
+        <span class="name">- Reduccion plan pensiones</span>
+        <span class="val neg">-${fmt(reduccionPensiones, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Resultado de restar las aportaciones a planes de pensiones de tu base imponible general. Sobre esta cantidad se calcula la cuota IRPF general.">
+        <span class="name">= Base general final</span>
+        <span class="val neutral">${fmt(nuevaBaseGeneral, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Impuesto que debes pagar por tu salario. Se calcula aplicando la escala estatal + autonómica sobre la base general final.">
+        <span class="name">Cuota IRPF (general)</span>
+        <span class="val neg">-${fmt(nuevaCuotaGeneral, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="RSuma de los intereses de cuentas bancarias y dividendos de acciones. Los bancos españoles ya retienen el 19% en origen.">
+        <span class="name">Rendimientos capital</span>
+        <span class="val neutral">${fmt(rendimientosCapital, 2)}</span>
+      </div>
+      ${perdidasUsadasContraCapital > 0 ? `
+      <div class="brow" tooltip-data="Exceso de perdidas usado - Las perdidas patrimoniales que exceden las ganancias pueden compensar hasta el 25% de los intereses y dividendos.">
+        <span class="name">- Exceso perdidas usado</span>
+        <span class="val neg">-${fmt(perdidasUsadasContraCapital, 2)}</span>
+      </div>` : ''}
+      <div class="brow" tooltip-data="Cantidad sobre la que tributan tus intereses y dividendos despues de aplicar las compensaciones por perdidas.">
+        <span class="name">= Base ahorro final</span>
+        <span class="val neutral">${fmt(baseAhorroFinal, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Impuesto que pagas por tus intereses y dividendos. Se calcula con la escala progresiva del ahorro: 19% hasta 6.000 €, 21% hasta 50.000 €, 23% hasta 200.000 €, 27% hasta 300.000 €, 28% en adelante.">
+        <span class="name">Cuota IRPF (ahorro)</span>
+        <span class="val neg">-${fmt(cuotaAhorro, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Ganancias obtenidas por la venta de activos (acciones, fondos, ETF, criptomonedas, inmuebles) menos las perdidas del mismo año.">
+        <span class="name">Ganancias patrimoniales netas</span>
+        <span class="val neutral">${fmt(gananciasPatrimonialesNetas, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Impuesto que pagas por tus ganancias patrimoniales. Se calcula con la misma escala progresiva del ahorro.">
+        <span class="name">Cuota IRPF (patrimoniales)</span>
+        <span class="val neg">-${fmt(cuotaPatrimoniales, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Cantidad que tu empresa ya ha retenido de tu nomina durante el año. Es dinero que ya has pagado a Hacienda.">
+        <span class="name">Retenciones trabajo</span>
+        <span class="val pos">+${fmt(retencionesTrabajo, 2)}</span>
+      </div>
+      <div class="brow" tooltip-data="Cantidad que tu banco o broker ya ha retenido de tus intereses y dividendos. Si el origen es extranjero, esta retencion puede ser 0% o diferente (ej: 15% en USA).">
+        <span class="name">Retenciones ahorro (19%)</span>
+        <span class="val pos">+${fmt(retencionesAhorro, 2)}</span>
+      </div>
+      <div class="brow total" tooltip-data="Diferencia entre lo que debes pagar (cuotas) y lo que ya has pagado (retenciones). Si es positivo, Hacienda te devuelve. Si es negativo, te sale a pagar.">
+        <span class="name">RESULTADO</span>
+        <span class="val">${resultadoFinal > 0.01 ? 'A devolver ' + fmt(resultadoFinal, 2) : (resultadoFinal < -0.01 ? 'A pagar ' + fmt(Math.abs(resultadoFinal), 2) : '0,00 €')}</span>
+      </div>
+      ${excesoPerdidas > perdidasUsadasContraCapital ? `
+      <div class="brow" tooltip-data="Perdidas no compensadas - El exceso de perdidas que no se ha podido compensar este año se pierde (no se arrastra a años siguientes).">
+        <span class="name">Perdidas no compensadas (se pierden)</span>
+        <span class="val neutral">${fmt(excesoPerdidas - perdidasUsadasContraCapital, 2)}</span>
+      </div>` : ''}
     `;
+  }
+
+  // Después de actualizar el desglose, reinicializar tooltips
+  if (typeof initTooltips === 'function') {
+    setTimeout(initTooltips, 50);
   }
 };
 
 function initRentaListeners() {
-
   const inputs = ['intereses', 'interesesExtranjero', 'dividendos', 'dividendosExtranjero', 
-                  'ganancias', 'perdidas', 'perdidasAnteriores', 
-                  'planPensionesIndividual', 'planPensionesEmpresa'];
+                  'ganancias', 'perdidas', 'planPensionesIndividual', 'planPensionesEmpresa'];
 
   inputs.forEach(id => {
     const element = document.getElementById(id);

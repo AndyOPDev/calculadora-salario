@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Calculadora Salario Neto · España</title>
+<title>Calculadora IRPF · España</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -14,13 +14,13 @@
 
   <header>
     <div class="label">IRPF · España · 2026</div>
-    <h1>Calculadora Salario</h1>
+    <h1>Calculadora IRPF y Renta</h1>
   </header>
 
   <!-- Pestañas -->
   <div class="tabs">
-    <button id="tabCalculadoraBtn" class="tab-btn active">Calculadora neto</button>
-    <button id="tabRentaBtn" class="tab-btn">Simulador Renta</button>
+    <button id="tabCalculadoraBtn" class="tab-btn active">Nómina</button>
+    <button id="tabRentaBtn" class="tab-btn">Declaración</button>
   </div>
 
   <!-- Panel de la Calculadora (pestaña 1) -->
@@ -205,7 +205,7 @@
 <!-- Panel del Simulador de Renta (pestaña 2) -->
 <div id="rentaPanel" class="panel" style="display: none;">
   <div class="card">
-    <div class="card-title">SIMULADOR DE RENTA 2025</div>
+    <div class="card-title">DATOS DE ENTRADA</div>
 
     <!-- Bloque: Rendimientos del capital -->
     <div class="breakdown">
@@ -216,7 +216,7 @@
         <div class="field">
           <label>Intereses de cuentas / depositos</label>
           <div class="field-wrap">
-            <input type="number" id="intereses" value="0" step="10">
+            <input type="number" id="intereses" value="" step="10">
             <span class="unit">€/año</span>
           </div>
           <div class="field-row">
@@ -224,14 +224,14 @@
               <input type="checkbox" id="interesesExtranjero"> Origen extranjero (sin retencion)
             </label>
           </div>
-          <div class="hint">Bancos españoles retienen el 19% en origen</div>
+          <!--<div class="hint">Bancos españoles retienen el 19% en origen</div>-->
         </div>
 
         <!-- Dividendos -->
         <div class="field">
           <label>Dividendos de acciones</label>
           <div class="field-wrap">
-            <input type="number" id="dividendos" value="0" step="10">
+            <input type="number" id="dividendos" value="" step="10">
             <span class="unit">€/año</span>
           </div>
           <div class="field-row">
@@ -239,7 +239,7 @@
               <input type="checkbox" id="dividendosExtranjero"> Origen extranjero (sin retencion)
             </label>
           </div>
-          <div class="hint">Empresas españolas retienen el 19% en origen</div>
+          <!--<div class="hint">Empresas españolas retienen el 19% en origen</div> -->
         </div>
       </div>
 
@@ -248,31 +248,20 @@
         <div class="field">
           <label>Ganancias patrimoniales (venta de activos)</label>
           <div class="field-wrap">
-            <input type="number" id="ganancias" value="0" step="10">
+            <input type="number" id="ganancias" value="" step="10">
             <span class="unit">€/año</span>
           </div>
-          <div class="hint">Acciones, fondos, ETF, criptomonedas, inmuebles... Sin retencion en origen</div>
+          <div class="hint">Acciones, fondos, ETF, criptomonedas, inmuebles...</div>
         </div>
         <div class="field">
           <label>Perdidas patrimoniales</label>
           <div class="field-wrap">
-            <input type="number" id="perdidas" value="0" step="10">
+            <input type="number" id="perdidas" value="" step="10">
             <span class="unit">€/año</span>
           </div>
           <div class="hint">Compensan las ganancias patrimoniales del mismo año</div>
         </div>
       </div>
-
-      <!-- Perdidas de años anteriores -->
-      <div class="field" style="margin-top: 0.5rem;">
-        <label>Perdidas patrimoniales de años anteriores (sin compensar)</label>
-        <div class="field-wrap">
-          <input type="number" id="perdidasAnteriores" value="0" step="10">
-          <span class="unit">€/año</span>
-        </div>
-        <div class="hint">Se pueden arrastrar hasta 4 años. Compensan hasta el 25% de los rendimientos del capital</div>
-      </div>
-    </div>
 
     <!-- Bloque: Planes de pensiones -->
     <div class="breakdown">
@@ -281,18 +270,16 @@
         <div class="field">
           <label>Plan de pensiones individual</label>
           <div class="field-wrap">
-            <input type="number" id="planPensionesIndividual" value="0" step="100">
+            <input type="number" id="planPensionesIndividual" value="" step="100" placeholder="Limite: 1.500 €">
             <span class="unit">€/año</span>
           </div>
-          <div class="hint">Limite anual: 1.500 €</div>
         </div>
         <div class="field">
           <label>Plan de pensiones de empresa</label>
           <div class="field-wrap">
-            <input type="number" id="planPensionesEmpresa" value="0" step="100">
+            <input type="number" id="planPensionesEmpresa" value="" step="100" placeholder="Limite: 8.500 €">
             <span class="unit">€/año</span>
           </div>
-          <div class="hint">Limite anual: 8.500 €</div>
         </div>
       </div>
     </div>
