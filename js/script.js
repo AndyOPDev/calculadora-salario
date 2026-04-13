@@ -206,10 +206,11 @@ function onComunidadChange() {
 }
 
 // ============================================================
-// TOOLTIPS PARA GRAFICOS
+// TOOLTIPS OPTIMIZADOS PARA MÓVIL
 // ============================================================
 
 let chartTooltip = null;
+let tooltipTimeout = null;
 
 function createChartTooltip() {
   if (!chartTooltip) {
@@ -220,25 +221,81 @@ function createChartTooltip() {
   return chartTooltip;
 }
 
-function showChartTooltip(event, text) {
+function hideChartTooltip() {
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout);
+    tooltipTimeout = null;
+  }
+  if (chartTooltip) {
+    chartTooltip.classList.remove('visible');
+  }
+}
+
+function showChartTooltip(event, text, isTap = false) {
+  // Ocultar tooltip anterior si existe
+  hideChartTooltip();
+  
   const tooltip = createChartTooltip();
   tooltip.innerHTML = text.replace(/\n/g, '<br>');
   tooltip.classList.add('visible');
-  tooltip.style.left = (event.clientX + 15) + 'px';
-  tooltip.style.top = (event.clientY - 10) + 'px';
+  
+  // Obtener coordenadas del evento (táctil o ratón)
+  let clientX, clientY;
+  if (event.touches) {
+    // Evento táctil
+    clientX = event.touches[0].clientX;
+    clientY = event.touches[0].clientY;
+  } else {
+    // Evento de ratón
+    clientX = event.clientX;
+    clientY = event.clientY;
+  }
+  
+  // Posicionar tooltip
+  let x = clientX + 15;
+  let y = clientY - 10;
+  
+  // Evitar que se salga de la pantalla
+  const tooltipRect = tooltip.getBoundingClientRect();
+  if (x + tooltipRect.width > window.innerWidth) {
+    x = clientX - tooltipRect.width - 10;
+  }
+  if (y + tooltipRect.height > window.innerHeight) {
+    y = clientY - tooltipRect.height - 10;
+  }
+  if (x < 10) x = 10;
+  if (y < 10) y = 10;
+  
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+  
+  // Si fue un tap (móvil), programar ocultación automática
+  if (isTap) {
+    tooltipTimeout = setTimeout(() => {
+      hideChartTooltip();
+    }, 2000);
+  }
 }
 
 function moveChartTooltip(event) {
   if (chartTooltip && chartTooltip.classList.contains('visible')) {
-    chartTooltip.style.left = (event.clientX + 15) + 'px';
-    chartTooltip.style.top = (event.clientY - 10) + 'px';
+    // Solo mover si no es un tooltip de tap (los de tap no se mueven)
+    const x = event.clientX + 15;
+    const y = event.clientY - 10;
+    chartTooltip.style.left = x + 'px';
+    chartTooltip.style.top = y + 'px';
   }
 }
 
-function hideChartTooltip() {
-  if (chartTooltip) {
-    chartTooltip.classList.remove('visible');
-  }
+// Función para manejar tap en móvil
+function onTooltipTap(event, text) {
+  event.preventDefault();
+  showChartTooltip(event, text, true);
+}
+
+// Cerrar tooltips al hacer scroll
+function onScrollOrTouchMove() {
+  hideChartTooltip();
 }
 
 // ============================================================
@@ -261,9 +318,9 @@ function drawDonutInteractive(segments) {
     const dash = pct * circ;
     const gap = circ - dash;
     let tooltipText = '';
-    //if (seg.label === 'Neto') tooltipText = 'Neto\nEl dinero que realmente llega a tu bolsillo despues de pagar impuestos y cotizaciones sociales.';
-    //else if (seg.label === 'IRPF') tooltipText = 'IRPF\nImpuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...';
-    //else tooltipText = 'Seguridad Social\nFinancia: pensiones, desempleo, bajas laborales, formacion profesional...';
+    if (seg.label === 'Neto') tooltipText = 'Neto\nEl dinero que realmente llega a tu bolsillo despues de pagar impuestos y cotizaciones sociales.\n\n';
+    else if (seg.label === 'IRPF') tooltipText = 'IRPF\nImpuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...\n\n';
+    else tooltipText = 'Seguridad Social\nFinancia: pensiones, desempleo, bajas laborales, formacion profesional...\n\n';
     tooltipText += fmtNumber(seg.val, 2) + ' €\n' + fmtPercent(pct * 100, 1);
     
     html += `<circle
@@ -292,9 +349,12 @@ function drawDonutInteractive(segments) {
   document.querySelectorAll('.donut-segment').forEach(el => {
     const tooltipText = el.dataset.tooltip;
     if (tooltipText) {
-      el.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipText));
+      // Ratón
+      el.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipText, false));
       el.addEventListener('mouseleave', hideChartTooltip);
       el.addEventListener('mousemove', moveChartTooltip);
+      // Táctil
+      el.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipText));
     }
   });
 }
@@ -307,7 +367,7 @@ function buildLegend(segments, total) {
     else if (s.label === 'IRPF') legendTooltip = 'Impuesto sobre la renta. Financia: sanidad, educacion, infraestructuras, defensa, pensiones...';
     else legendTooltip = 'Seguridad Social. Financia: pensiones, desempleo, bajas laborales, formacion profesional...';
     
-    return `<div class="legend-item" style="cursor:help" tooltip-data="${legendTooltip.replace(/"/g, '&quot;')}">
+    return `<div class="legend-item" style="cursor:help" data-tooltip-text="${legendTooltip.replace(/"/g, '&quot;')}">
       <div class="legend-dot" style="background:${s.color}"></div>
       <div class="legend-info">
         <div class="legend-name">${s.label}</div>
@@ -315,6 +375,16 @@ function buildLegend(segments, total) {
       </div>
     </div>`;
   }).join('');
+  
+  // Añadir event listeners a los legend items
+  document.querySelectorAll('.legend-item').forEach(el => {
+    const tooltipText = el.dataset.tooltipText;
+    if (tooltipText) {
+      el.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipText, false));
+      el.addEventListener('mouseleave', hideChartTooltip);
+      el.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipText));
+    }
+  });
 }
 
 // ============================================================
@@ -345,6 +415,7 @@ const tooltipsText = {
 };
 
 function initTooltips() {
+  // Tooltips para inputs (labels)
   const inputFields = [
     { id: 'brutoAnual', text: tooltipsText.brutoAnual },
     { id: 'extraMes', text: tooltipsText.extraMes },
@@ -356,13 +427,17 @@ function initTooltips() {
     const element = document.getElementById(field.id);
     if (element) {
       const label = element.closest('.field')?.querySelector('label');
-      if (label && !label.hasAttribute('tooltip-data')) {
-        label.setAttribute('tooltip-data', field.text);
+      if (label && !label.hasAttribute('data-tooltip-attached')) {
+        label.setAttribute('data-tooltip-attached', 'true');
+        label.addEventListener('mouseenter', (e) => showChartTooltip(e, field.text, false));
+        label.addEventListener('mouseleave', hideChartTooltip);
+        label.addEventListener('touchstart', (e) => onTooltipTap(e, field.text));
         label.style.cursor = 'help';
       }
     }
   });
   
+  // Tooltips para filas del desglose
   const browFields = [
     { id: 'dBruto', text: tooltipsText.dBruto },
     { id: 'dExtra', text: tooltipsText.dExtra },
@@ -382,31 +457,45 @@ function initTooltips() {
     const element = document.getElementById(field.id);
     if (element) {
       const browDiv = element.closest('.brow');
-      if (browDiv && !browDiv.hasAttribute('tooltip-data')) {
-        browDiv.setAttribute('tooltip-data', field.text);
+      if (browDiv && !browDiv.hasAttribute('data-tooltip-attached')) {
+        browDiv.setAttribute('data-tooltip-attached', 'true');
+        browDiv.addEventListener('mouseenter', (e) => showChartTooltip(e, field.text, false));
+        browDiv.addEventListener('mouseleave', hideChartTooltip);
+        browDiv.addEventListener('touchstart', (e) => onTooltipTap(e, field.text));
         browDiv.style.cursor = 'help';
       }
     }
   });
   
+  // Tooltips para labels de métricas
   const netoMesLabel = document.getElementById('netoMesLabel');
-  if (netoMesLabel && !netoMesLabel.hasAttribute('tooltip-data')) {
-    netoMesLabel.setAttribute('tooltip-data', tooltipsText.netoMesLabel);
+  if (netoMesLabel && !netoMesLabel.hasAttribute('data-tooltip-attached')) {
+    netoMesLabel.setAttribute('data-tooltip-attached', 'true');
+    netoMesLabel.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipsText.netoMesLabel, false));
+    netoMesLabel.addEventListener('mouseleave', hideChartTooltip);
+    netoMesLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoMesLabel));
     netoMesLabel.style.cursor = 'help';
   }
   
   const netoExtraLabel = document.getElementById('netoExtraLabel');
-  if (netoExtraLabel && !netoExtraLabel.hasAttribute('tooltip-data')) {
-    netoExtraLabel.setAttribute('tooltip-data', tooltipsText.netoExtraLabel);
+  if (netoExtraLabel && !netoExtraLabel.hasAttribute('data-tooltip-attached')) {
+    netoExtraLabel.setAttribute('data-tooltip-attached', 'true');
+    netoExtraLabel.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipsText.netoExtraLabel, false));
+    netoExtraLabel.addEventListener('mouseleave', hideChartTooltip);
+    netoExtraLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.netoExtraLabel));
     netoExtraLabel.style.cursor = 'help';
   }
   
+  // Tooltips para resumen ejecutivo
   const tipoMarginalEl = document.getElementById('tipoMarginal');
   if (tipoMarginalEl) {
     const parentMetric = tipoMarginalEl.closest('.metric');
     const parentLabel = parentMetric?.querySelector('.metric-label');
-    if (parentLabel && !parentLabel.hasAttribute('tooltip-data')) {
-      parentLabel.setAttribute('tooltip-data', tooltipsText.tipoMarginal);
+    if (parentLabel && !parentLabel.hasAttribute('data-tooltip-attached')) {
+      parentLabel.setAttribute('data-tooltip-attached', 'true');
+      parentLabel.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipsText.tipoMarginal, false));
+      parentLabel.addEventListener('mouseleave', hideChartTooltip);
+      parentLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.tipoMarginal));
       parentLabel.style.cursor = 'help';
     }
   }
@@ -415,8 +504,11 @@ function initTooltips() {
   if (tipoEfectivoResumen) {
     const parentMetric = tipoEfectivoResumen.closest('.metric');
     const parentLabel = parentMetric?.querySelector('.metric-label');
-    if (parentLabel && !parentLabel.hasAttribute('tooltip-data')) {
-      parentLabel.setAttribute('tooltip-data', tooltipsText.tipoEfectivo);
+    if (parentLabel && !parentLabel.hasAttribute('data-tooltip-attached')) {
+      parentLabel.setAttribute('data-tooltip-attached', 'true');
+      parentLabel.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipsText.tipoEfectivo, false));
+      parentLabel.addEventListener('mouseleave', hideChartTooltip);
+      parentLabel.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipsText.tipoEfectivo));
       parentLabel.style.cursor = 'help';
     }
   }
@@ -627,9 +719,12 @@ function calcular() {
   document.querySelectorAll('.tooltip-tramo').forEach(el => {
     const tooltipText = el.dataset.tooltip;
     if (tooltipText) {
-      el.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipText));
+      // Ratón
+      el.addEventListener('mouseenter', (e) => showChartTooltip(e, tooltipText, false));
       el.addEventListener('mouseleave', hideChartTooltip);
       el.addEventListener('mousemove', moveChartTooltip);
+      // Táctil
+      el.addEventListener('touchstart', (e) => onTooltipTap(e, tooltipText));
     }
   });
 
@@ -664,6 +759,11 @@ function setupComunidadSelector() {
     selector.addEventListener('change', onComunidadChange);
   }
 }
+
+// Event listeners para cerrar tooltips al hacer scroll
+window.addEventListener('scroll', onScrollOrTouchMove);
+window.addEventListener('touchmove', onScrollOrTouchMove);
+window.addEventListener('touchend', hideChartTooltip);
 
 // Event listeners
 document.getElementById('brutoAnual').addEventListener('input', calcular);
